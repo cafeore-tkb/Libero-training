@@ -205,6 +205,7 @@ function updateUI() {
 }
 
 let last = performance.now();
+let uiElapsed = 0;
 function tick(now) {
   requestAnimationFrame(tick);
   const rawDt = Math.min(.05, (now - last) / 1000); last = now;
@@ -238,7 +239,8 @@ function tick(now) {
     ui.timer.querySelector("strong").textContent = `${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`;
     ui.timer.classList.toggle("warning", state.time < 15);
     if (state.time <= 0) endGame();
-    updateUI();
+    uiElapsed += rawDt;
+    if (uiElapsed >= .1) { updateUI(); uiElapsed = 0; }
   }
   kettleData.forEach((k, i) => { k.group.position.y = 1.52 + Math.sin(now * .0012 + i) * .007; });
   renderer.render(scene, camera);
