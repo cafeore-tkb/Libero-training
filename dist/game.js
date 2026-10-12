@@ -161,6 +161,7 @@ scene.add(sign);
 const ROOM_TEMP = 22;
 const FILL_RATE = .25;
 const HEAT_POWER = 13.8;
+const KETTLE_COOL_RATE = .25;
 const state = { running: false, selected: 0, selectedDripper: 0, selectedPot: 0, filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true };
 const $ = (q) => document.querySelector(q);
 const ui = {
@@ -403,7 +404,7 @@ function tick(now) {
       if (k.state === "heating") {
         k.temp = Math.min(100, k.temp + (HEAT_POWER / Math.max(k.water, .05)) * rawDt);
         if (k.temp >= 99.5) { k.temp = 100; k.state = "ready"; }
-      } else if (k.temp > 22) k.temp = Math.max(22, k.temp - .55 * rawDt);
+      } else if (k.temp > 22) k.temp = Math.max(22, k.temp - KETTLE_COOL_RATE * rawDt);
       if (k.state === "ready" && k.temp < 92) k.state = "filled";
       if (k.temp >= 99.5) {
         k.boilTime += rawDt;
