@@ -139,7 +139,7 @@ function makeCoffeePot(index, x) {
   requestRing.rotation.x = -Math.PI / 2; requestRing.position.y = .015; group.add(requestRing);
 
   scene.add(group);
-  potData.push({ index, group, liquid, requestRing, waterLevel: 0, flash: 0, busyTime: 0, assignedDripper: null });
+  potData.push({ index, group, liquid, requestRing, water: 0, temp: 22, waterLevel: 0, flash: 0, busyTime: 0, assignedDripper: null });
 }
 
 [
@@ -230,6 +230,12 @@ function heatSelected() {
   updateUI();
 }
 
+function getFillPlan(pot, kettle) {
+  const needed = Math.max(0, .9 - pot.water);
+  const projectedTemp = needed > 0 ? ((pot.water * pot.temp) + (needed * kettle.temp)) / .9 : pot.temp;
+  return { needed, projectedTemp };
+}
+
 function serveSelected() {
   if (!state.running) return;
   const k = kettleData[state.selected];
@@ -237,24 +243,25 @@ function serveSelected() {
   const orderIndex = state.orders.findIndex(order => order.dripper === state.selectedDripper);
   if (orderIndex < 0) return toast(`DRIPPER 0${state.selectedDripper + 1} は待機中です`, true);
   if (pot.busyTime > 0) return toast(`POT 0${state.selectedPot + 1} は使用中です`, true);
-  if (k.water < .9) return toast("水量不足 — 900ml必要", true);
-  if (k.temp < 92) { state.score = Math.max(0, state.score - 30); state.combo = 1; toast(`${Math.round(k.temp)}°C — まだぬるい！ −30`, true); return; }
+  const { needed, projectedTemp } = getFillPlan(pot, k);
+  if (k.water + .001 < needed) return toast(`水量不足 — あと${Math.round(needed * 1000)}ml必要`, true);
+  if (projectedTemp < 92) { state.score = Math.max(0, state.score - 30); state.combo = 1; toast(`混合後${Math.round(projectedTemp)}°C — まだぬるい！ −30`, true); return; }
   const [order] = state.orders.splice(orderIndex, 1);
   const speedBonus = Math.round(order.time * 4);
   const points = 100 + speedBonus + (state.combo - 1) * 20;
   state.score += points; state.served++; state.combo++; state.bestCombo = Math.max(state.bestCombo, state.combo);
-  k.water = Math.round((k.water - .9) * 10) / 10;
-  k.temp = Math.max(22, k.temp - 10);
+  k.water = Math.max(0, Math.round((k.water - needed) * 100) / 100);
+  k.temp = Math.max(22, k.temp - (3 + needed * 6));
   k.state = k.water > 0 ? (k.temp >= 92 ? "ready" : "filled") : "empty";
   k.boilTime = 0; k.pourAnim = 1;
-  pot.waterLevel = 1; pot.flash = 1; pot.busyTime = 7; pot.assignedDripper = order.dripper;
-  toast(`D0${order.dripper + 1} ← POT 0${pot.index + 1} / 900ml +${points}`); updateUI();
+  pot.water = .9; pot.temp = projectedTemp; pot.waterLevel = 1; pot.flash = 1; pot.busyTime = 7; pot.assignedDripper = order.dripper;
+  toast(`D0${order.dripper + 1} ← P0${pot.index + 1} / +${Math.round(needed * 1000)}ml・${Math.round(projectedTemp)}°C`); updateUI();
 }
 
 function resetGame() {
   Object.assign(state, { running: true, selected: 0, selectedDripper: 0, selectedPot: 0, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: .6 });
   kettleData.forEach(k => Object.assign(k, { water: 0, temp: 22, state: "empty", boilTime: 0, pourAnim: 0 }));
-  potData.forEach(pot => Object.assign(pot, { waterLevel: 0, flash: 0, busyTime: 0, assignedDripper: null }));
+  potData.forEach(pot => Object.assign(pot, { water: 0, temp: 22, waterLevel: 0, flash: 0, busyTime: 0, assignedDripper: null }));
   $("#intro").classList.remove("show"); $("#result").classList.remove("show");
   selectKettle(0); updateUI();
 }
@@ -305,12 +312,18 @@ function updateUI() {
   [...ui.potTabs.children].forEach((tab, i) => {
     tab.classList.toggle("active", i === state.selectedPot);
     tab.classList.toggle("busy", potData[i].busyTime > 0);
+    tab.classList.toggle("returned", potData[i].busyTime <= 0 && potData[i].water > 0);
     tab.textContent = potData[i].busyTime > 0 ? `${Math.ceil(potData[i].busyTime)}s` : `P${i + 1}`;
+    tab.title = potData[i].busyTime > 0 ? "使用中" : potData[i].water > 0 ? `${Math.round(potData[i].water * 1000)}ml / ${Math.round(potData[i].temp)}°C` : "空のポット";
   });
   const availableCount = potData.filter(pot => pot.busyTime <= 0).length;
   ui.availablePots.textContent = `${availableCount}/8`;
-  ui.target.textContent = `D${String(state.selectedDripper + 1).padStart(2,"0")} → P${String(state.selectedPot + 1).padStart(2,"0")}`;
-  ui.fill.disabled = k.state === "heating" || k.temp > 55; ui.heat.disabled = k.water <= 0; ui.serve.disabled = k.water < .9 || k.temp < 92 || !selectedOrder || selectedPot.busyTime > 0;
+  const { needed, projectedTemp } = getFillPlan(selectedPot, k);
+  const potStatus = selectedPot.water > 0 ? `${Math.round(selectedPot.water * 1000)}ml・${Math.round(selectedPot.temp)}°` : "空";
+  ui.target.textContent = selectedPot.busyTime > 0
+    ? `P${String(state.selectedPot + 1).padStart(2,"0")} 使用中`
+    : `D${String(state.selectedDripper + 1).padStart(2,"0")} → P${String(state.selectedPot + 1).padStart(2,"0")} ${potStatus} / +${Math.round(needed * 1000)}ml → ${Math.round(projectedTemp)}°C`;
+  ui.fill.disabled = k.state === "heating" || k.temp > 55; ui.heat.disabled = k.water <= 0; ui.serve.disabled = k.water + .001 < needed || projectedTemp < 92 || !selectedOrder || selectedPot.busyTime > 0;
   renderOrders();
 }
 
@@ -349,14 +362,22 @@ function tick(now) {
     });
     potData.forEach(pot => {
       pot.flash = Math.max(0, pot.flash - rawDt * .8);
+      const wasBusy = pot.busyTime > 0;
       pot.busyTime = Math.max(0, pot.busyTime - rawDt);
-      if (pot.busyTime <= 0) pot.assignedDripper = null;
-      pot.waterLevel = pot.busyTime > 0 ? Math.min(1, pot.busyTime / 2) : 0;
+      if (wasBusy && pot.busyTime <= 0) {
+        pot.assignedDripper = null;
+        pot.water = Math.round((.4 + Math.random() * .1) * 100) / 100;
+        pot.temp = Math.max(22, pot.temp - (6 + Math.random() * 4));
+        pot.flash = 1;
+      } else if (!wasBusy && pot.water > 0) {
+        pot.temp = Math.max(22, pot.temp - .18 * rawDt);
+      }
+      pot.waterLevel = pot.busyTime > 0 ? .55 + (pot.busyTime / 7) * .45 : pot.water / .9;
       pot.liquid.visible = pot.waterLevel > .01;
       pot.liquid.scale.y = Math.max(.02, pot.waterLevel);
       pot.liquid.position.y = .1 + .2 * pot.waterLevel;
       pot.requestRing.material.opacity = state.selectedPot === pot.index ? .95 : pot.busyTime > 0 ? .45 : .1;
-      pot.requestRing.material.color.setHex(pot.busyTime > 0 || pot.flash > 0 ? 0xb7ee68 : 0xff9b56);
+      pot.requestRing.material.color.setHex(pot.busyTime > 0 ? 0xb7ee68 : pot.water > 0 ? 0x79b9c5 : 0xff9b56);
     });
     const mins = Math.floor(state.time / 60), secs = Math.floor(state.time % 60);
     ui.timer.querySelector("strong").textContent = `${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`;

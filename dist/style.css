@@ -79,6 +79,7 @@ button { color: inherit; }
 .pot-tab { height: 27px; padding: 0; border: 1px solid var(--line); color: var(--muted); background: transparent; font: 500 9px "DM Mono"; cursor: pointer; }
 .pot-tab.active { border-color: var(--orange); color: #1b1712; background: var(--orange); }
 .pot-tab.busy:not(.active) { border-color: #b7ee6866; color: var(--green); }
+.pot-tab.returned:not(.active) { border-color: #79b9c577; color: #9ed9e4; }
 .target-line { margin: 8px 0 0; color: var(--orange); font: 500 10px "DM Mono"; text-align: right; }
 
 .controls { position: fixed; z-index: 5; left: 50%; bottom: 35px; display: flex; gap: 8px; transform: translateX(-50%); }
@@ -154,7 +155,8 @@ h1 em { color: var(--green); font-style: normal; }
   .pot-rack { margin-top: 8px; padding-top: 8px; }
   .pot-tabs { grid-template-columns: repeat(8, 1fr); }
   .pot-tab { height: 24px; }
-  .pot-rack-label, .target-line { display: none; }
+  .pot-rack-label { display: none; }
+  .target-line { font-size: 8px; text-align: center; }
   .panel-label { margin-bottom: 8px; }
   .controls { z-index: 6; }
   .rules span { font-size: 9px; }
