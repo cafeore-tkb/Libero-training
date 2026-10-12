@@ -49,9 +49,12 @@ button { color: inherit; }
 .panel-label { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .panel-label b { display: grid; place-items: center; min-width: 24px; height: 21px; padding: 0 6px; color: #162116; background: var(--green); font-size: 10px; }
 .orders { display: grid; gap: 8px; }
-.order { position: relative; overflow: hidden; display: flex; align-items: center; gap: 11px; padding: 11px 12px; border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(14px); animation: slide-in .25s ease-out both; }
+.order { position: relative; overflow: hidden; width: 100%; display: flex; align-items: center; gap: 11px; padding: 9px 11px; border: 1px solid var(--line); color: var(--ink); background: var(--panel); backdrop-filter: blur(14px); animation: slide-in .25s ease-out both; cursor: pointer; text-align: left; transition: border-color .15s, background .15s, opacity .15s; }
 .order::after { content:""; position:absolute; left:0; bottom:0; height:2px; width:var(--life); background:var(--green); transition:width .2s linear; }
 .order.urgent::after { background: var(--danger); }
+.order.active { border-color: var(--orange); background: rgba(43, 47, 34, .94); }
+.order.idle { opacity: .48; }
+.order.idle::after { display: none; }
 .order-no { color: var(--green); font: 500 11px "DM Mono"; }
 .order-copy { flex: 1; }
 .order-copy b { display: block; font-size: 12px; }
@@ -132,11 +135,15 @@ h1 em { color: var(--green); font-style: normal; }
 @media (max-width: 520px) {
   .scoreboard { width: calc(100% - 24px); }
   .metric, .timer { flex: 1; min-width: 0; }
-  .orders-panel { top: 128px; }
+  .orders-panel { top: 128px; width: calc(100% - 24px); }
+  .orders { grid-template-columns: repeat(6, 1fr); gap: 3px; }
+  .order { display: block; min-width: 0; padding: 6px 2px; text-align: center; }
+  .order-no { display: block; }
+  .order-copy { display: none; }
+  .order-time { display: block; margin-top: 2px; font-size: 8px; }
   .kettle-panel { top: auto; right: 12px; bottom: 76px; width: calc(100% - 24px); }
   .kettle-panel .readout, .kettle-panel .temperature-track, .kettle-panel .state-line { display: none; }
   .panel-label { margin-bottom: 8px; }
-  .order:nth-child(n+3) { display: none; }
   .controls { z-index: 6; }
   .rules span { font-size: 9px; }
 }

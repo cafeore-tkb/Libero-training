@@ -50,7 +50,7 @@ const clickable = [];
 
 function makeKettle(index, x) {
   const group = new THREE.Group();
-  group.position.set(x, 1.52, 0);
+  group.position.set(x, 1.52, -.65);
   group.userData.index = index;
 
   const bodyMat = new THREE.MeshStandardMaterial({ color: kettleColors[index], roughness: .34, metalness: .15 });
@@ -86,10 +86,41 @@ function makeKettle(index, x) {
   }
 
   scene.add(group);
-  kettleData.push({ index, group, body, led, selector, steam, water: 0, temp: 22, state: "empty", boilTime: 0 });
+  kettleData.push({ index, group, body, led, selector, steam, water: 0, temp: 22, state: "empty", boilTime: 0, pourAnim: 0 });
 }
 
 [-3.8, -1.9, 0, 1.9, 3.8].forEach((x, i) => makeKettle(i, x));
+
+const potData = [];
+const potClickable = [];
+
+function makeCoffeePot(index, x) {
+  const group = new THREE.Group();
+  group.position.set(x, 1.48, 1.12);
+
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0xc6d5d0, roughness: .1, transmission: .72, transparent: true, opacity: .58, thickness: .12 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x17201c, roughness: .48 });
+  const coffee = new THREE.MeshStandardMaterial({ color: 0x5f301c, roughness: .3, transparent: true, opacity: .82 });
+
+  const carafe = new THREE.Mesh(new THREE.CylinderGeometry(.3, .4, .64, 18), glass);
+  carafe.position.y = .34; carafe.castShadow = true; carafe.userData = { type: "pot", index }; group.add(carafe); potClickable.push(carafe);
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(.34, .34, .13, 18), dark);
+  collar.position.y = .69; collar.userData = { type: "pot", index }; group.add(collar); potClickable.push(collar);
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(.38, .055, 8, 18, Math.PI * 1.25), dark);
+  handle.rotation.set(Math.PI / 2, 0, -.62); handle.position.set(.3, .39, 0); group.add(handle);
+  const dripper = new THREE.Mesh(new THREE.ConeGeometry(.34, .45, 18, 1, true), new THREE.MeshStandardMaterial({ color: 0xefe8d8, roughness: .75, side: THREE.DoubleSide }));
+  dripper.position.y = .97; dripper.rotation.x = Math.PI; dripper.userData = { type: "pot", index }; group.add(dripper); potClickable.push(dripper);
+
+  const liquid = new THREE.Mesh(new THREE.CylinderGeometry(.31, .35, .45, 18), coffee);
+  liquid.position.y = .3; liquid.scale.y = .02; liquid.visible = false; group.add(liquid);
+  const requestRing = new THREE.Mesh(new THREE.RingGeometry(.47, .54, 24), new THREE.MeshBasicMaterial({ color: 0xff9b56, side: THREE.DoubleSide, transparent: true, opacity: .12 }));
+  requestRing.rotation.x = -Math.PI / 2; requestRing.position.y = .015; group.add(requestRing);
+
+  scene.add(group);
+  potData.push({ index, group, liquid, requestRing, waterLevel: 0, flash: 0 });
+}
+
+[-4.5, -2.7, -.9, .9, 2.7, 4.5].forEach((x, i) => makeCoffeePot(i, x));
 
 const wall = new THREE.Mesh(new THREE.PlaneGeometry(24, 12), new THREE.MeshStandardMaterial({ color: 0x1b2d25, roughness: 1 }));
 wall.position.set(0, 5, -4); scene.add(wall);
@@ -102,7 +133,7 @@ for (let i = 0; i < 5; i++) {
 }
 scene.add(sign);
 
-const state = { running: false, selected: 0, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true };
+const state = { running: false, selected: 0, selectedPot: 0, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true };
 const $ = (q) => document.querySelector(q);
 const ui = {
   score: $("#score"), combo: $("#combo"), timer: $("#timer"), orders: $("#orders"), count: $("#order-count"),
@@ -122,6 +153,11 @@ function selectKettle(index) {
   updateUI();
 }
 
+function selectPot(index) {
+  state.selectedPot = index;
+  updateUI();
+}
+
 let toastTimer;
 function toast(message, error = false) {
   clearTimeout(toastTimer); ui.toast.textContent = message; ui.toast.className = `toast show${error ? " error" : ""}`;
@@ -129,9 +165,14 @@ function toast(message, error = false) {
 }
 
 function addOrder() {
-  if (state.orders.length >= 4) return;
+  if (state.orders.length >= 6) return;
+  const occupied = new Set(state.orders.map(order => order.pot));
+  const available = Array.from({ length: 6 }, (_, index) => index).filter(index => !occupied.has(index));
+  if (!available.length) return;
+  const pot = available[Math.floor(Math.random() * available.length)];
   const max = Math.max(16, 25 - Math.floor((90 - state.time) / 15));
-  state.orders.push({ id: state.orderId++, time: max, max });
+  state.orders.push({ id: state.orderId++, pot, time: max, max });
+  if (state.orders.length === 1) state.selectedPot = pot;
 }
 
 function fillSelected() {
@@ -155,22 +196,26 @@ function heatSelected() {
 function serveSelected() {
   if (!state.running) return;
   const k = kettleData[state.selected];
-  if (!state.orders.length) return toast("まだ注文がありません", true);
-  if (k.water < .6) return toast("水量不足 — 0.6L必要", true);
+  const orderIndex = state.orders.findIndex(order => order.pot === state.selectedPot);
+  if (orderIndex < 0) return toast(`POT 0${state.selectedPot + 1} は待機中です`, true);
+  if (k.water < .9) return toast("水量不足 — 900ml必要", true);
   if (k.temp < 92) { state.score = Math.max(0, state.score - 30); state.combo = 1; toast(`${Math.round(k.temp)}°C — まだぬるい！ −30`, true); return; }
-  const order = state.orders.shift();
+  const [order] = state.orders.splice(orderIndex, 1);
   const speedBonus = Math.round(order.time * 4);
   const points = 100 + speedBonus + (state.combo - 1) * 20;
   state.score += points; state.served++; state.combo++; state.bestCombo = Math.max(state.bestCombo, state.combo);
-  k.water = Math.round((k.water - .6) * 10) / 10;
-  k.temp = Math.max(22, k.temp - 8);
+  k.water = Math.round((k.water - .9) * 10) / 10;
+  k.temp = Math.max(22, k.temp - 10);
   k.state = k.water > 0 ? (k.temp >= 92 ? "ready" : "filled") : "empty";
-  k.boilTime = 0; toast(`GOOD SERVE +${points}`); updateUI();
+  k.boilTime = 0; k.pourAnim = 1;
+  potData[order.pot].waterLevel = 1; potData[order.pot].flash = 1;
+  toast(`POT 0${order.pot + 1} — 900ml完了 +${points}`); updateUI();
 }
 
 function resetGame() {
-  Object.assign(state, { running: true, selected: 0, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.2 });
-  kettleData.forEach(k => Object.assign(k, { water: 0, temp: 22, state: "empty", boilTime: 0 }));
+  Object.assign(state, { running: true, selected: 0, selectedPot: 0, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: .6 });
+  kettleData.forEach(k => Object.assign(k, { water: 0, temp: 22, state: "empty", boilTime: 0, pourAnim: 0 }));
+  potData.forEach(pot => Object.assign(pot, { waterLevel: 0, flash: 0 }));
   $("#intro").classList.remove("show"); $("#result").classList.remove("show");
   selectKettle(0); updateUI();
 }
@@ -185,28 +230,26 @@ function endGame() {
 }
 
 function renderOrders() {
-  const activeIds = new Set(state.orders.map(order => String(order.id)));
-
-  [...ui.orders.children].forEach(element => {
-    if (!activeIds.has(element.dataset.orderId)) element.remove();
-  });
-
-  state.orders.forEach(o => {
-    const life = Math.max(0, o.time / o.max * 100);
-    let element = ui.orders.querySelector(`[data-order-id="${o.id}"]`);
-
+  for (let potIndex = 0; potIndex < 6; potIndex++) {
+    const order = state.orders.find(item => item.pot === potIndex);
+    let element = ui.orders.querySelector(`[data-pot-index="${potIndex}"]`);
     if (!element) {
-      element = document.createElement("div");
+      element = document.createElement("button");
+      element.type = "button";
       element.className = "order";
-      element.dataset.orderId = o.id;
-      element.innerHTML = `<span class="order-no">#${String(o.id).padStart(2,"0")}</span><span class="order-copy"><b>ドリップ用</b><small>0.6L / 92°C+</small></span><span class="order-time"></span>`;
+      element.dataset.potIndex = potIndex;
+      element.innerHTML = `<span class="order-no">D${String(potIndex + 1).padStart(2,"0")}</span><span class="order-copy"><b>DRIPPER ${String(potIndex + 1).padStart(2,"0")}</b><small></small></span><span class="order-time"></span>`;
+      element.onclick = () => selectPot(potIndex);
       ui.orders.append(element);
     }
-
-    element.classList.toggle("urgent", life < 30);
+    const life = order ? Math.max(0, order.time / order.max * 100) : 0;
+    element.classList.toggle("active", state.selectedPot === potIndex);
+    element.classList.toggle("idle", !order);
+    element.classList.toggle("urgent", Boolean(order && life < 30));
     element.style.setProperty("--life", `${life}%`);
-    element.querySelector(".order-time").textContent = `${Math.ceil(o.time)}s`;
-  });
+    element.querySelector(".order-copy small").textContent = order ? "POT / 0.9L / 92°C+" : "ポット待機中";
+    element.querySelector(".order-time").textContent = order ? `${Math.ceil(order.time)}s` : "—";
+  }
   ui.count.textContent = state.orders.length;
 }
 
@@ -218,7 +261,8 @@ function updateUI() {
   const labels = { empty: "空 — 給水してください", filled: "待機中 — 加熱できます", heating: "加熱中 — 温度上昇", ready: "準備完了 — 提供できます" };
   ui.state.textContent = labels[k.state];
   [...ui.tabs.children].forEach((tab, i) => { tab.classList.toggle("active", i === state.selected); tab.classList.toggle("hot", kettleData[i].temp >= 92); });
-  ui.fill.disabled = k.state === "heating" || k.temp > 55; ui.heat.disabled = k.water <= 0; ui.serve.disabled = k.water < .6 || k.temp < 92 || !state.orders.length;
+  const selectedOrder = state.orders.some(order => order.pot === state.selectedPot);
+  ui.fill.disabled = k.state === "heating" || k.temp > 55; ui.heat.disabled = k.water <= 0; ui.serve.disabled = k.water < .9 || k.temp < 92 || !selectedOrder;
   renderOrders();
 }
 
@@ -230,7 +274,7 @@ function tick(now) {
   if (state.running) {
     state.time = Math.max(0, state.time - rawDt);
     state.nextOrder -= rawDt;
-    if (state.nextOrder <= 0) { addOrder(); state.nextOrder = Math.max(3.2, 6.2 - (90 - state.time) * .03) + Math.random() * 1.8; }
+    if (state.nextOrder <= 0) { addOrder(); state.nextOrder = Math.max(2.5, 5.1 - (90 - state.time) * .025) + Math.random() * 1.4; }
     state.orders.forEach(o => o.time -= rawDt);
     const expired = state.orders.filter(o => o.time <= 0).length;
     if (expired) { state.orders = state.orders.filter(o => o.time > 0); state.score = Math.max(0, state.score - expired * 80); state.combo = 1; toast(`注文切れ！ −${expired * 80}`, true); }
@@ -252,6 +296,18 @@ function tick(now) {
         p.material.opacity = active ? Math.max(0, .25 - i * .025) * (0.65 + Math.sin(now * .003 + i) * .35) : 0;
         p.position.y = 1.55 + i * .14 + Math.sin(now * .0018 + i) * .05;
       });
+      if (k.pourAnim > 0) k.pourAnim = Math.max(0, k.pourAnim - rawDt * 1.5);
+      k.group.rotation.x = -Math.sin(k.pourAnim * Math.PI) * .32;
+    });
+    potData.forEach(pot => {
+      const hasOrder = state.orders.some(order => order.pot === pot.index);
+      pot.flash = Math.max(0, pot.flash - rawDt * .8);
+      pot.waterLevel = Math.max(0, pot.waterLevel - rawDt * .18);
+      pot.liquid.visible = pot.waterLevel > .01;
+      pot.liquid.scale.y = Math.max(.02, pot.waterLevel);
+      pot.liquid.position.y = .1 + .2 * pot.waterLevel;
+      pot.requestRing.material.opacity = state.selectedPot === pot.index ? .95 : hasOrder ? .42 + Math.sin(now * .006 + pot.index) * .12 : .1;
+      pot.requestRing.material.color.setHex(pot.flash > 0 ? 0xb7ee68 : 0xff9b56);
     });
     const mins = Math.floor(state.time / 60), secs = Math.floor(state.time % 60);
     ui.timer.querySelector("strong").textContent = `${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`;
@@ -268,8 +324,11 @@ const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
 canvas.addEventListener("pointerdown", (e) => {
   pointer.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
-  const hit = raycaster.intersectObjects(clickable)[0];
-  if (hit) selectKettle(hit.object.userData.index);
+  const hit = raycaster.intersectObjects([...clickable, ...potClickable])[0];
+  if (hit) {
+    if (hit.object.userData.type === "pot") selectPot(hit.object.userData.index);
+    else selectKettle(hit.object.userData.index);
+  }
 });
 
 let dragging = false, dragX = 0, cameraAngle = 0;
