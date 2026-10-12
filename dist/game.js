@@ -158,7 +158,10 @@ for (let i = 0; i < 5; i++) {
 }
 scene.add(sign);
 
-const state = { running: false, selected: 0, selectedDripper: 0, selectedPot: 0, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true };
+const ROOM_TEMP = 22;
+const FILL_RATE = .45;
+const HEAT_POWER = 13.8;
+const state = { running: false, selected: 0, selectedDripper: 0, selectedPot: 0, filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true };
 const $ = (q) => document.querySelector(q);
 const ui = {
   score: $("#score"), combo: $("#combo"), timer: $("#timer"), orders: $("#orders"), count: $("#order-count"),
@@ -180,6 +183,7 @@ for (let i = 0; i < 8; i++) {
 }
 
 function selectKettle(index) {
+  if (state.filling) endFill();
   state.selected = index;
   kettleData.forEach((k, i) => { k.selector.material.opacity = i === index ? .9 : 0; });
   updateUI();
@@ -212,19 +216,26 @@ function addOrder() {
   if (state.orders.length === 1) state.selectedDripper = dripper;
 }
 
-function fillSelected() {
+function beginFill() {
   if (!state.running) return;
   const k = kettleData[state.selected];
   if (k.state === "heating") return toast("加熱中は給水できません", true);
-  const added = 1.2 - k.water;
-  if (added < .01) return toast("ケトルは満水です", true);
-  k.temp = ((k.water * k.temp) + (added * 22)) / 1.2;
-  k.water = 1.2; k.state = k.temp >= 92 ? "ready" : "filled"; k.boilTime = 0;
-  toast(`KETTLE 0${k.index + 1} — +${Math.round(added * 1000)}ml給水`); updateUI();
+  if (k.water >= 1.199) return toast("ケトルは満水です", true);
+  state.filling = true;
+  state.fillKettle = state.selected;
+  updateUI();
+}
+
+function endFill() {
+  if (!state.filling) return;
+  state.filling = false;
+  state.fillKettle = null;
+  updateUI();
 }
 
 function heatSelected() {
   if (!state.running) return;
+  endFill();
   const k = kettleData[state.selected];
   if (k.water <= 0) { state.score = Math.max(0, state.score - 50); state.combo = 1; toast("空焚き！ −50", true); return; }
   if (k.state === "heating") { k.state = k.temp >= 92 ? "ready" : "filled"; toast("加熱を停止"); }
@@ -234,6 +245,7 @@ function heatSelected() {
 
 function returnWaterToKettle() {
   if (!state.running) return;
+  endFill();
   const k = kettleData[state.selected];
   const pot = potData[state.selectedPot];
   if (pot.busyTime > 0) return toast(`POT 0${pot.index + 1} はまだ使用中です`, true);
@@ -252,6 +264,7 @@ function returnWaterToKettle() {
 
 function serveSelected() {
   if (!state.running) return;
+  endFill();
   const k = kettleData[state.selected];
   const pot = potData[state.selectedPot];
   const orderIndex = state.orders.findIndex(order => order.dripper === state.selectedDripper);
@@ -273,7 +286,7 @@ function serveSelected() {
 }
 
 function resetGame() {
-  Object.assign(state, { running: true, selected: 0, selectedDripper: 0, selectedPot: 0, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: .6 });
+  Object.assign(state, { running: true, selected: 0, selectedDripper: 0, selectedPot: 0, filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: .6 });
   kettleData.forEach(k => Object.assign(k, { water: 0, temp: 22, state: "empty", boilTime: 0, pourAnim: 0 }));
   potData.forEach(pot => Object.assign(pot, { water: 0, temp: 22, waterLevel: 0, flash: 0, returnAnim: 0, busyTime: 0, assignedDripper: null }));
   $("#intro").classList.remove("show"); $("#result").classList.remove("show");
@@ -281,6 +294,7 @@ function resetGame() {
 }
 
 function endGame() {
+  endFill();
   state.running = false;
   const rank = state.score >= 1800 ? "S" : state.score >= 1200 ? "A" : state.score >= 700 ? "B" : "C";
   $("#result-rank").textContent = `RANK ${rank}`;
@@ -339,6 +353,7 @@ function updateUI() {
       ? `P${String(state.selectedPot + 1).padStart(2,"0")} ${potStatus} → K${String(state.selected + 1).padStart(2,"0")}へ戻す`
       : `D${String(state.selectedDripper + 1).padStart(2,"0")} → P${String(state.selectedPot + 1).padStart(2,"0")} / 900ml`;
   ui.fill.disabled = k.state === "heating" || k.water >= 1.199;
+  ui.fill.classList.toggle("holding", state.filling && state.fillKettle === state.selected);
   ui.heat.disabled = k.water <= 0;
   ui.returnWater.disabled = selectedPot.busyTime > 0 || selectedPot.water <= 0 || k.state === "heating" || k.water + selectedPot.water > 1.201;
   ui.serve.disabled = k.water < .9 || k.temp < 92 || !selectedOrder || selectedPot.busyTime > 0 || selectedPot.water > 0;
@@ -358,9 +373,26 @@ function tick(now) {
     const expired = state.orders.filter(o => o.time <= 0).length;
     if (expired) { state.orders = state.orders.filter(o => o.time > 0); state.score = Math.max(0, state.score - expired * 80); state.combo = 1; toast(`注文切れ！ −${expired * 80}`, true); }
 
+    if (state.filling && state.fillKettle !== null) {
+      const fillingKettle = kettleData[state.fillKettle];
+      if (fillingKettle.state === "heating" || fillingKettle.water >= 1.199) {
+        const reachedFull = fillingKettle.water >= 1.199;
+        endFill();
+        if (reachedFull) toast(`KETTLE 0${fillingKettle.index + 1} — 満水`);
+      } else {
+        const oldWater = fillingKettle.water;
+        const added = Math.min(FILL_RATE * rawDt, 1.2 - oldWater);
+        const newWater = oldWater + added;
+        fillingKettle.temp = newWater > 0 ? ((oldWater * fillingKettle.temp) + (added * ROOM_TEMP)) / newWater : ROOM_TEMP;
+        fillingKettle.water = newWater;
+        fillingKettle.state = fillingKettle.temp >= 92 ? "ready" : "filled";
+        fillingKettle.boilTime = 0;
+      }
+    }
+
     kettleData.forEach(k => {
       if (k.state === "heating") {
-        k.temp = Math.min(100, k.temp + 11.5 * rawDt);
+        k.temp = Math.min(100, k.temp + (HEAT_POWER / Math.max(k.water, .05)) * rawDt);
         if (k.temp >= 99.5) { k.temp = 100; k.state = "ready"; }
       } else if (k.temp > 22) k.temp = Math.max(22, k.temp - .55 * rawDt);
       if (k.state === "ready" && k.temp < 92) k.state = "filled";
@@ -432,13 +464,22 @@ addEventListener("pointermove", e => {
 
 addEventListener("keydown", e => {
   if (/^[1-5]$/.test(e.key)) selectKettle(Number(e.key) - 1);
-  if (e.key.toLowerCase() === "f") fillSelected();
+  if (e.key.toLowerCase() === "f" && !e.repeat) beginFill();
   if (e.key.toLowerCase() === "r") returnWaterToKettle();
   if (e.key.toLowerCase() === "s") serveSelected();
   if (e.code === "Space") { e.preventDefault(); heatSelected(); }
 });
 
-ui.fill.onclick = fillSelected; ui.heat.onclick = heatSelected; ui.returnWater.onclick = returnWaterToKettle; ui.serve.onclick = serveSelected;
+addEventListener("keyup", e => {
+  if (e.key.toLowerCase() === "f") endFill();
+});
+addEventListener("blur", endFill);
+
+ui.fill.addEventListener("pointerdown", e => { e.preventDefault(); beginFill(); });
+ui.fill.addEventListener("pointercancel", endFill);
+ui.fill.addEventListener("contextmenu", e => e.preventDefault());
+addEventListener("pointerup", endFill);
+ui.heat.onclick = heatSelected; ui.returnWater.onclick = returnWaterToKettle; ui.serve.onclick = serveSelected;
 $("#start-button").onclick = resetGame; $("#restart-button").onclick = resetGame;
 $("#sound-toggle").onclick = (e) => { state.sound = !state.sound; e.currentTarget.classList.toggle("muted", !state.sound); };
 
