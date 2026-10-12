@@ -185,10 +185,28 @@ function endGame() {
 }
 
 function renderOrders() {
-  ui.orders.innerHTML = state.orders.map(o => {
+  const activeIds = new Set(state.orders.map(order => String(order.id)));
+
+  [...ui.orders.children].forEach(element => {
+    if (!activeIds.has(element.dataset.orderId)) element.remove();
+  });
+
+  state.orders.forEach(o => {
     const life = Math.max(0, o.time / o.max * 100);
-    return `<div class="order ${life < 30 ? "urgent" : ""}" style="--life:${life}%"><span class="order-no">#${String(o.id).padStart(2,"0")}</span><span class="order-copy"><b>ドリップ用</b><small>0.6L / 92°C+</small></span><span class="order-time">${Math.ceil(o.time)}s</span></div>`;
-  }).join("");
+    let element = ui.orders.querySelector(`[data-order-id="${o.id}"]`);
+
+    if (!element) {
+      element = document.createElement("div");
+      element.className = "order";
+      element.dataset.orderId = o.id;
+      element.innerHTML = `<span class="order-no">#${String(o.id).padStart(2,"0")}</span><span class="order-copy"><b>ドリップ用</b><small>0.6L / 92°C+</small></span><span class="order-time"></span>`;
+      ui.orders.append(element);
+    }
+
+    element.classList.toggle("urgent", life < 30);
+    element.style.setProperty("--life", `${life}%`);
+    element.querySelector(".order-time").textContent = `${Math.ceil(o.time)}s`;
+  });
   ui.count.textContent = state.orders.length;
 }
 
