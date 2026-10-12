@@ -48,9 +48,10 @@ const kettleColors = [0xe75c42, 0xe3b440, 0x5ca88d, 0x728ed2, 0xa779c6];
 const kettleData = [];
 const clickable = [];
 
-function makeKettle(index, x) {
+function makeKettle(index, x, z) {
   const group = new THREE.Group();
-  group.position.set(x, 1.52, -.65);
+  group.position.set(x, 1.52, z);
+  group.scale.setScalar(.72);
   group.userData.index = index;
 
   const bodyMat = new THREE.MeshStandardMaterial({ color: kettleColors[index], roughness: .38, metalness: .12 });
@@ -96,15 +97,20 @@ function makeKettle(index, x) {
   kettleData.push({ index, group, body, led, selector, steam, water: 0, temp: 22, state: "empty", boilTime: 0, pourAnim: 0 });
 }
 
-[-3.8, -1.9, 0, 1.9, 3.8].forEach((x, i) => makeKettle(i, x));
+[
+  [.45, .55], [1.45, -.8], [2.45, .05], [3.45, -.8], [4.45, .55]
+].forEach(([x, z], i) => makeKettle(i, x, z));
 
 const potData = [];
-const potClickable = [];
+const POT_QUEUE_POSITIONS = [
+  [-4.65, -.45], [-3.45, -.45], [-2.25, -.45], [-1.05, -.45],
+  [-4.65, .75], [-3.45, .75], [-2.25, .75], [-1.05, .75]
+];
 
 function makeCoffeePot(index, x) {
   const group = new THREE.Group();
   group.position.set(x, 1.47, 1.12);
-  group.scale.setScalar(.78);
+  group.scale.setScalar(.68);
 
   const steel = new THREE.MeshStandardMaterial({ color: 0xbcc5c0, roughness: .2, metalness: .86 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x171d1a, roughness: .5 });
@@ -114,9 +120,9 @@ function makeCoffeePot(index, x) {
     new THREE.Vector2(.39, .82), new THREE.Vector2(.3, .88), new THREE.Vector2(0, .88)
   ];
   const body = new THREE.Mesh(new THREE.LatheGeometry(potProfile, 24), steel);
-  body.position.y = .08; body.castShadow = true; body.userData = { type: "pot", index }; group.add(body); potClickable.push(body);
+  body.position.y = .08; body.castShadow = true; group.add(body);
   const lid = new THREE.Mesh(new THREE.CylinderGeometry(.28, .34, .07, 20), dark);
-  lid.position.y = 1; lid.userData = { type: "pot", index }; group.add(lid); potClickable.push(lid);
+  lid.position.y = 1; group.add(lid);
   const knob = new THREE.Mesh(new THREE.SphereGeometry(.08, 12, 8), dark);
   knob.scale.y = .55; knob.position.y = 1.08; group.add(knob);
 
@@ -142,10 +148,7 @@ function makeCoffeePot(index, x) {
   potData.push({ index, group, liquid, requestRing, water: 0, temp: 22, waterLevel: 0, flash: 0, returnAnim: 0, busyTime: 0, assignedDripper: null });
 }
 
-[
-  [-3.75, .72], [-1.25, .72], [1.25, .72], [3.75, .72],
-  [-3.75, 1.55], [-1.25, 1.55], [1.25, 1.55], [3.75, 1.55]
-].forEach(([x, z], i) => { makeCoffeePot(i, x); potData[i].group.position.z = z; });
+POT_QUEUE_POSITIONS.forEach(([x, z], i) => { makeCoffeePot(i, x); potData[i].group.position.z = z; });
 
 const wall = new THREE.Mesh(new THREE.PlaneGeometry(24, 12), new THREE.MeshStandardMaterial({ color: 0x1b2d25, roughness: 1 }));
 wall.position.set(0, 5, -4); scene.add(wall);
@@ -162,12 +165,12 @@ const ROOM_TEMP = 22;
 const FILL_RATE = .25;
 const HEAT_POWER = 13.8;
 const KETTLE_COOL_RATE = .25;
-const state = { running: false, selected: 0, selectedDripper: 0, selectedPot: 0, filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true };
+const state = { running: false, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true };
 const $ = (q) => document.querySelector(q);
 const ui = {
   score: $("#score"), combo: $("#combo"), timer: $("#timer"), orders: $("#orders"), count: $("#order-count"),
   number: $("#selected-number"), temp: $("#selected-temp"), water: $("#selected-water"), tempBar: $("#temp-bar"), state: $("#selected-state"),
-  tabs: $("#kettle-tabs"), potTabs: $("#pot-tabs"), availablePots: $("#available-pots"), target: $("#target-line"),
+  tabs: $("#kettle-tabs"), potQueue: $("#pot-queue"), availablePots: $("#available-pots"), target: $("#target-line"),
   fill: $("#fill-button"), heat: $("#heat-button"), returnWater: $("#return-button"), serve: $("#serve-button"), toast: $("#toast")
 };
 
@@ -178,20 +181,15 @@ for (let i = 0; i < 5; i++) {
 }
 
 for (let i = 0; i < 8; i++) {
-  const button = document.createElement("button");
-  button.className = "pot-tab"; button.textContent = `P${i + 1}`; button.onclick = () => selectPot(i);
-  ui.potTabs.append(button);
+  const slot = document.createElement("span");
+  slot.className = "pot-slot";
+  ui.potQueue.append(slot);
 }
 
 function selectKettle(index) {
   if (state.filling) endFill();
   state.selected = index;
   kettleData.forEach((k, i) => { k.selector.material.opacity = i === index ? .9 : 0; });
-  updateUI();
-}
-
-function selectPot(index) {
-  state.selectedPot = index;
   updateUI();
 }
 
@@ -248,9 +246,10 @@ function returnWaterToKettle() {
   if (!state.running) return;
   endFill();
   const k = kettleData[state.selected];
-  const pot = potData[state.selectedPot];
-  if (pot.busyTime > 0) return toast(`POT 0${pot.index + 1} はまだ使用中です`, true);
-  if (pot.water <= 0) return toast(`POT 0${pot.index + 1} に戻り湯はありません`, true);
+  const headIndex = state.potQueue[0];
+  if (headIndex === undefined) return toast("すべてのポットが使用中です", true);
+  const pot = potData[headIndex];
+  if (pot.water <= 0) return toast("キュー先頭は空のポットです", true);
   if (k.state === "heating") return toast("加熱中のケトルには戻せません", true);
   const capacity = 1.2 - k.water;
   if (capacity + .001 < pot.water) return toast(`ケトルの空き容量が${Math.round((pot.water - capacity) * 1000)}ml不足`, true);
@@ -260,18 +259,21 @@ function returnWaterToKettle() {
   k.water = Math.round(mixedVolume * 100) / 100;
   k.state = k.temp >= 92 ? "ready" : "filled"; k.boilTime = 0;
   pot.water = 0; pot.temp = 22; pot.waterLevel = 0; pot.flash = 1; pot.returnAnim = 1;
-  toast(`POT 0${pot.index + 1} → KETTLE 0${k.index + 1} / ${Math.round(transferred * 1000)}ml回収`); updateUI();
+  state.potQueue.shift();
+  state.potQueue.push(pot.index);
+  toast(`QUEUE → KETTLE 0${k.index + 1} / ${Math.round(transferred * 1000)}ml回収`); updateUI();
 }
 
 function serveSelected() {
   if (!state.running) return;
   endFill();
   const k = kettleData[state.selected];
-  const pot = potData[state.selectedPot];
+  const headIndex = state.potQueue[0];
+  if (headIndex === undefined) return toast("空きポットがありません", true);
+  const pot = potData[headIndex];
   const orderIndex = state.orders.findIndex(order => order.dripper === state.selectedDripper);
   if (orderIndex < 0) return toast(`DRIPPER 0${state.selectedDripper + 1} は待機中です`, true);
-  if (pot.busyTime > 0) return toast(`POT 0${state.selectedPot + 1} は使用中です`, true);
-  if (pot.water > 0) return toast("先に戻り湯をケトルへ移してください", true);
+  if (pot.water > 0) return toast("先頭ポットの戻り湯を先に回収してください", true);
   if (k.water + .001 < .9) return toast("水量不足 — 900ml必要", true);
   if (k.temp < 92) { state.score = Math.max(0, state.score - 30); state.combo = 1; toast(`${Math.round(k.temp)}°C — まだぬるい！ −30`, true); return; }
   const [order] = state.orders.splice(orderIndex, 1);
@@ -283,11 +285,12 @@ function serveSelected() {
   k.state = k.water > 0 ? (k.temp >= 92 ? "ready" : "filled") : "empty";
   k.boilTime = 0; k.pourAnim = 1;
   pot.water = .9; pot.temp = k.temp + 8; pot.waterLevel = 1; pot.flash = 1; pot.busyTime = 7; pot.assignedDripper = order.dripper;
-  toast(`D0${order.dripper + 1} ← P0${pot.index + 1} / 900ml完了 +${points}`); updateUI();
+  state.potQueue.shift();
+  toast(`D0${order.dripper + 1} ← NEXT POT / 900ml完了 +${points}`); updateUI();
 }
 
 function resetGame() {
-  Object.assign(state, { running: true, selected: 0, selectedDripper: 0, selectedPot: 0, filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: .6 });
+  Object.assign(state, { running: true, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: .6 });
   kettleData.forEach(k => Object.assign(k, { water: 0, temp: 22, state: "empty", boilTime: 0, pourAnim: 0 }));
   potData.forEach(pot => Object.assign(pot, { water: 0, temp: 22, waterLevel: 0, flash: 0, returnAnim: 0, busyTime: 0, assignedDripper: null }));
   $("#intro").classList.remove("show"); $("#result").classList.remove("show");
@@ -338,27 +341,29 @@ function updateUI() {
   ui.state.textContent = labels[k.state];
   [...ui.tabs.children].forEach((tab, i) => { tab.classList.toggle("active", i === state.selected); tab.classList.toggle("hot", kettleData[i].temp >= 92); });
   const selectedOrder = state.orders.some(order => order.dripper === state.selectedDripper);
-  const selectedPot = potData[state.selectedPot];
-  [...ui.potTabs.children].forEach((tab, i) => {
-    tab.classList.toggle("active", i === state.selectedPot);
-    tab.classList.toggle("busy", potData[i].busyTime > 0);
-    tab.classList.toggle("returned", potData[i].busyTime <= 0 && potData[i].water > 0);
-    tab.textContent = potData[i].busyTime > 0 ? `${Math.ceil(potData[i].busyTime)}s` : `P${i + 1}`;
-    tab.title = potData[i].busyTime > 0 ? "使用中" : potData[i].water > 0 ? `${Math.round(potData[i].water * 1000)}ml / ${Math.round(potData[i].temp)}°C` : "空のポット";
+  [...ui.potQueue.children].forEach((slot, queueIndex) => {
+    const potIndex = state.potQueue[queueIndex];
+    const pot = potIndex === undefined ? null : potData[potIndex];
+    slot.className = "pot-slot";
+    if (queueIndex === 0 && pot) slot.classList.add("head");
+    if (!pot) { slot.classList.add("in-use"); slot.textContent = "使用中"; }
+    else if (pot.water > 0) { slot.classList.add("returned"); slot.textContent = `戻り ${Math.round(pot.water * 1000)}`; }
+    else { slot.classList.add("empty"); slot.textContent = "空"; }
   });
-  const availableCount = potData.filter(pot => pot.busyTime <= 0 && pot.water <= 0).length;
-  ui.availablePots.textContent = `${availableCount}/8`;
-  const potStatus = selectedPot.water > 0 ? `${Math.round(selectedPot.water * 1000)}ml・${Math.round(selectedPot.temp)}°` : "空";
-  ui.target.textContent = selectedPot.busyTime > 0
-    ? `P${String(state.selectedPot + 1).padStart(2,"0")} 使用中`
-    : selectedPot.water > 0
-      ? `P${String(state.selectedPot + 1).padStart(2,"0")} ${potStatus} → K${String(state.selected + 1).padStart(2,"0")}へ戻す`
-      : `D${String(state.selectedDripper + 1).padStart(2,"0")} → P${String(state.selectedPot + 1).padStart(2,"0")} / 900ml`;
+  const headIndex = state.potQueue[0];
+  const headPot = headIndex === undefined ? null : potData[headIndex];
+  const emptyCount = state.potQueue.filter(index => potData[index].water <= 0).length;
+  ui.availablePots.textContent = `${emptyCount} READY`;
+  ui.target.textContent = !headPot
+    ? "QUEUE EMPTY — 全ポット使用中"
+    : headPot.water > 0
+      ? `NEXT: 戻り湯 ${Math.round(headPot.water * 1000)}ml・${Math.round(headPot.temp)}°C → K${String(state.selected + 1).padStart(2,"0")}`
+      : `NEXT: 空ポット → D${String(state.selectedDripper + 1).padStart(2,"0")} / 900ml`;
   ui.fill.disabled = k.state === "heating" || k.water >= 1.199;
   ui.fill.classList.toggle("holding", state.filling && state.fillKettle === state.selected);
   ui.heat.disabled = k.water <= 0;
-  ui.returnWater.disabled = selectedPot.busyTime > 0 || selectedPot.water <= 0 || k.state === "heating" || k.water + selectedPot.water > 1.201;
-  ui.serve.disabled = k.water < .9 || k.temp < 92 || !selectedOrder || selectedPot.busyTime > 0 || selectedPot.water > 0;
+  ui.returnWater.disabled = !headPot || headPot.water <= 0 || k.state === "heating" || k.water + headPot.water > 1.201;
+  ui.serve.disabled = !headPot || k.water < .9 || k.temp < 92 || !selectedOrder || headPot.water > 0;
   renderOrders();
 }
 
@@ -429,6 +434,7 @@ function tick(now) {
         pot.water = Math.round((.4 + Math.random() * .1) * 100) / 100;
         pot.temp = Math.max(22, pot.temp - (6 + Math.random() * 4));
         pot.flash = 1;
+        if (!state.potQueue.includes(pot.index)) state.potQueue.push(pot.index);
       } else if (!wasBusy && pot.water > 0) {
         pot.temp = Math.max(22, pot.temp - .18 * rawDt);
       }
@@ -436,8 +442,15 @@ function tick(now) {
       pot.liquid.visible = pot.waterLevel > .01;
       pot.liquid.scale.y = Math.max(.02, pot.waterLevel);
       pot.liquid.position.y = .1 + .2 * pot.waterLevel;
-      pot.requestRing.material.opacity = state.selectedPot === pot.index ? .95 : pot.busyTime > 0 ? .45 : .1;
-      pot.requestRing.material.color.setHex(pot.busyTime > 0 ? 0xb7ee68 : pot.water > 0 ? 0x79b9c5 : 0xff9b56);
+      const queueIndex = state.potQueue.indexOf(pot.index);
+      pot.group.visible = queueIndex >= 0;
+      if (queueIndex >= 0) {
+        const [targetX, targetZ] = POT_QUEUE_POSITIONS[queueIndex];
+        pot.group.position.x += (targetX - pot.group.position.x) * Math.min(1, rawDt * 7);
+        pot.group.position.z += (targetZ - pot.group.position.z) * Math.min(1, rawDt * 7);
+      }
+      pot.requestRing.material.opacity = queueIndex === 0 ? .95 : .12;
+      pot.requestRing.material.color.setHex(pot.water > 0 ? 0x79b9c5 : 0xff9b56);
       if (pot.returnAnim > 0) pot.returnAnim = Math.max(0, pot.returnAnim - rawDt * 1.6);
       pot.group.rotation.z = Math.sin(pot.returnAnim * Math.PI) * .45;
     });
@@ -456,11 +469,8 @@ const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
 canvas.addEventListener("pointerdown", (e) => {
   pointer.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
-  const hit = raycaster.intersectObjects([...clickable, ...potClickable])[0];
-  if (hit) {
-    if (hit.object.userData.type === "pot") selectPot(hit.object.userData.index);
-    else selectKettle(hit.object.userData.index);
-  }
+  const hit = raycaster.intersectObjects(clickable)[0];
+  if (hit) selectKettle(hit.object.userData.index);
 });
 
 let dragging = false, dragX = 0, cameraAngle = 0;

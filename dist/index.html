@@ -13,7 +13,7 @@
   </head>
   <body>
     <main id="app">
-      <canvas id="scene" aria-label="5台の電気ケトルと8個の共有コーヒーポットが並ぶ3D作業台"></canvas>
+      <canvas id="scene" aria-label="右側にM字配置された5台の電気ケトルと、左側に並ぶコーヒーポットキューの3D作業台"></canvas>
 
       <header class="topbar">
         <a class="brand" href="#" aria-label="LIBERO ホーム">
@@ -45,9 +45,9 @@
         <p id="selected-state" class="state-line">空 — 給水してください</p>
         <div class="kettle-tabs" id="kettle-tabs" aria-label="ケトル選択"></div>
         <div class="pot-rack">
-          <div class="pot-rack-label"><span>SHARED COFFEE POTS</span><b id="available-pots">8/8</b></div>
-          <div class="pot-tabs" id="pot-tabs" aria-label="共有コーヒーポット選択"></div>
-          <p id="target-line" class="target-line">D01 → P01</p>
+          <div class="pot-rack-label"><span>POT QUEUE / FIFO</span><b id="available-pots">8 READY</b></div>
+          <div class="pot-queue" id="pot-queue" aria-label="コーヒーポット待機キュー"></div>
+          <p id="target-line" class="target-line">NEXT: 空ポット → D01</p>
         </div>
       </aside>
 
@@ -66,12 +66,12 @@
         <div class="modal-card">
           <p class="eyebrow">COFFEE FESTIVAL / ROLE TRAINING</p>
           <h1>湯を切らすな。<br /><em>店の流れ</em>を守れ。</h1>
-          <p class="lead">あなたはコーヒー店舗の遊撃手「リベロ」。5台のケトルを回し、6人のドリッパーから届く要求に、8個の共有コーヒーポットで応えよう。</p>
+          <p class="lead">あなたはコーヒー店舗の遊撃手「リベロ」。右側にM字で並ぶ5台のケトルを回し、6人の要求へポットキューの先頭から応えよう。</p>
           <div class="rules">
             <div><b>01</b><span>ボタンを長押し<br />必要量を給水</span></div>
             <div><b>02</b><span>スイッチON<br />沸騰を監視</span></div>
-            <div><b>03</b><span>戻り湯を必ず<br />ケトルへ回収</span></div>
-            <div><b>04</b><span>空ポットへ<br />900ml注ぐ</span></div>
+            <div><b>03</b><span>キュー先頭の<br />戻り湯を回収</span></div>
+            <div><b>04</b><span>次の空ポットへ<br />900ml注ぐ</span></div>
           </div>
           <button id="start-button" class="start-button">シフト開始 <span>→</span></button>
           <small class="safety">※ 加熱出力は一定。水が少ないほど温度は速く上がります。</small>
