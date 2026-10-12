@@ -211,8 +211,8 @@ function addOrder() {
   const available = Array.from({ length: 6 }, (_, index) => index).filter(index => !occupied.has(index));
   if (!available.length) return;
   const dripper = available[Math.floor(Math.random() * available.length)];
-  const max = Math.max(16, 25 - Math.floor((90 - state.time) / 15));
-  state.orders.push({ id: state.orderId++, dripper, time: max, max });
+  const max = 35 + Math.floor(Math.random() * 16);
+  state.orders.push({ id: state.orderId++, dripper, time: max, max, overdue: false });
   if (state.orders.length === 1) state.selectedDripper = dripper;
 }
 
@@ -319,10 +319,11 @@ function renderOrders() {
     const life = order ? Math.max(0, order.time / order.max * 100) : 0;
     element.classList.toggle("active", state.selectedDripper === dripperIndex);
     element.classList.toggle("idle", !order);
-    element.classList.toggle("urgent", Boolean(order && life < 30));
+    element.classList.toggle("urgent", Boolean(order && !order.overdue && life < 30));
+    element.classList.toggle("overdue", Boolean(order?.overdue));
     element.style.setProperty("--life", `${life}%`);
-    element.querySelector(".order-copy small").textContent = order ? "900ml REQUEST" : "リクエスト待機中";
-    element.querySelector(".order-time").textContent = order ? `${Math.ceil(order.time)}s` : "—";
+    element.querySelector(".order-copy small").textContent = order?.overdue ? "時間超過 / 900ml" : order ? "900ml REQUEST" : "リクエスト待機中";
+    element.querySelector(".order-time").textContent = order?.overdue ? "OVER" : order ? `${Math.ceil(order.time)}s` : "—";
   }
   ui.count.textContent = state.orders.length;
 }
@@ -369,9 +370,17 @@ function tick(now) {
     state.time = Math.max(0, state.time - rawDt);
     state.nextOrder -= rawDt;
     if (state.nextOrder <= 0) { addOrder(); state.nextOrder = Math.max(2.5, 5.1 - (90 - state.time) * .025) + Math.random() * 1.4; }
-    state.orders.forEach(o => o.time -= rawDt);
-    const expired = state.orders.filter(o => o.time <= 0).length;
-    if (expired) { state.orders = state.orders.filter(o => o.time > 0); state.score = Math.max(0, state.score - expired * 80); state.combo = 1; toast(`注文切れ！ −${expired * 80}`, true); }
+    let newlyOverdue = 0;
+    state.orders.forEach(order => {
+      if (order.overdue) return;
+      order.time = Math.max(0, order.time - rawDt);
+      if (order.time <= 0) { order.overdue = true; newlyOverdue++; }
+    });
+    if (newlyOverdue) {
+      state.score = Math.max(0, state.score - newlyOverdue * 80);
+      state.combo = 1;
+      toast(`時間超過 — 注文を保持中 −${newlyOverdue * 80}`, true);
+    }
 
     if (state.filling && state.fillKettle !== null) {
       const fillingKettle = kettleData[state.fillKettle];
