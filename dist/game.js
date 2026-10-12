@@ -159,7 +159,7 @@ for (let i = 0; i < 5; i++) {
 scene.add(sign);
 
 const ROOM_TEMP = 22;
-const FILL_RATE = .45;
+const FILL_RATE = .25;
 const HEAT_POWER = 13.8;
 const state = { running: false, selected: 0, selectedDripper: 0, selectedPot: 0, filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true };
 const $ = (q) => document.querySelector(q);
