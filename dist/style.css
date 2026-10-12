@@ -91,6 +91,8 @@ button { color: inherit; }
 .action-button small { margin-bottom: 3px; }
 .action-button.primary { color: #172017; background: var(--green); }
 .action-button.primary small { color: #506d32; }
+.action-button.return { color: #102126; background: #79b9c5; }
+.action-button.return small { color: #315c65; }
 .action-button.accent { color: #1b1712; background: var(--orange); }
 .action-button.accent small { color: #754421; }
 .hint { position: fixed; z-index: 5; right: 32px; bottom: 28px; color: var(--muted); font: 9px "DM Mono"; letter-spacing: .05em; }
@@ -108,7 +110,7 @@ button { color: inherit; }
 h1 { margin: 17px 0 18px; font-size: clamp(35px, 6vw, 59px); line-height: 1.12; letter-spacing: -.06em; }
 h1 em { color: var(--green); font-style: normal; }
 .lead { color: #b6c1ba; font-size: 13px; line-height: 1.9; }
-.rules { display: grid; grid-template-columns: repeat(3, 1fr); margin: 27px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.rules { display: grid; grid-template-columns: repeat(4, 1fr); margin: 27px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .rules div { display: flex; gap: 11px; padding: 17px 10px; border-right: 1px solid var(--line); }
 .rules div:last-child { border: 0; }
 .rules b { color: var(--green); font: 500 12px "DM Mono"; }
@@ -137,6 +139,7 @@ h1 em { color: var(--green); font-style: normal; }
   .readout strong { font-size: 18px; }
   .controls { bottom: 13px; width: calc(100% - 24px); gap: 4px; }
   .action-button { flex: 1; min-width: 0; height: 54px; padding: 0 9px; gap: 7px; }
+  .action-button span { font-size: 11px; }
   .action-button kbd { display: none; }
   .modal-card { padding: 30px 25px; }
 }
