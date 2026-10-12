@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#13231d" />
+    <meta name="description" content="5台の電気ケトルを操る、学園祭コーヒー店のリベロ訓練ゲーム。" />
+    <title>LIBERO — 湯沸かし訓練</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="scene" aria-label="5台の電気ケトルが並ぶ3D作業台"></canvas>
+
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="LIBERO ホーム">
+          <span class="brand-mark">L</span>
+          <span><b>LIBERO</b><small>湯沸かし訓練</small></span>
+        </a>
+        <div class="shift-status"><span class="live-dot"></span>文化祭・本番想定</div>
+        <button id="sound-toggle" class="icon-button" aria-label="サウンド切替">♪</button>
+      </header>
+
+      <section class="scoreboard" aria-label="ゲーム状況">
+        <div class="metric"><span>SCORE</span><strong id="score">0000</strong></div>
+        <div class="metric combo"><span>COMBO</span><strong id="combo">×1</strong></div>
+        <div class="timer" id="timer"><span>SHIFT</span><strong>01:30</strong></div>
+      </section>
+
+      <aside class="orders-panel">
+        <div class="panel-label"><span>ORDER QUEUE</span><b id="order-count">0</b></div>
+        <div id="orders" class="orders"></div>
+      </aside>
+
+      <aside class="kettle-panel">
+        <div class="panel-label"><span>KETTLE STATUS</span><b id="selected-number">01</b></div>
+        <div class="readout">
+          <div><span>温度</span><strong id="selected-temp">22<small>°C</small></strong></div>
+          <div><span>水量</span><strong id="selected-water">0.0<small>L</small></strong></div>
+        </div>
+        <div class="temperature-track"><i id="temp-bar"></i><em>100°</em></div>
+        <p id="selected-state" class="state-line">空 — 給水してください</p>
+        <div class="kettle-tabs" id="kettle-tabs" aria-label="ケトル選択"></div>
+      </aside>
+
+      <section class="controls" aria-label="操作パネル">
+        <button id="fill-button" class="action-button secondary"><kbd>F</kbd><span><small>STEP 01</small>給水する</span></button>
+        <button id="heat-button" class="action-button primary"><kbd>SPACE</kbd><span><small>STEP 02</small>沸かす</span></button>
+        <button id="serve-button" class="action-button accent"><kbd>S</kbd><span><small>STEP 03</small>渡す</span></button>
+      </section>
+
+      <div class="hint"><span>ドラッグ</span> 視点移動 <i></i> <span>1—5</span> ケトル選択</div>
+
+      <div id="toast" class="toast" role="status"></div>
+
+      <section id="intro" class="modal show" aria-modal="true" role="dialog">
+        <div class="modal-card">
+          <p class="eyebrow">COFFEE FESTIVAL / ROLE TRAINING</p>
+          <h1>湯を切らすな。<br /><em>店の流れ</em>を守れ。</h1>
+          <p class="lead">あなたはコーヒー店舗の遊撃手「リベロ」。5台のケトルを回し、注文が冷める前に92°C以上のお湯を届けよう。</p>
+          <div class="rules">
+            <div><b>01</b><span>ケトルを選び<br />1.2L給水</span></div>
+            <div><b>02</b><span>スイッチON<br />沸騰を監視</span></div>
+            <div><b>03</b><span>注文ごとに<br />0.6L提供</span></div>
+          </div>
+          <button id="start-button" class="start-button">シフト開始 <span>→</span></button>
+          <small class="safety">※ 空焚き・沸騰放置は減点。90秒のスコアアタックです。</small>
+        </div>
+      </section>
+
+      <section id="result" class="modal" aria-modal="true" role="dialog">
+        <div class="modal-card result-card">
+          <p class="eyebrow">SHIFT COMPLETE</p>
+          <h2 id="result-rank">RANK A</h2>
+          <p id="result-copy" class="lead"></p>
+          <div class="result-grid">
+            <div><span>最終スコア</span><b id="final-score">0</b></div>
+            <div><span>提供数</span><b id="final-served">0</b></div>
+            <div><span>最高コンボ</span><b id="final-combo">0</b></div>
+          </div>
+          <button id="restart-button" class="start-button">もう一度挑戦 <span>↻</span></button>
+        </div>
+      </section>
+    </main>
+    <script type="importmap">
+      {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
+    </script>
+    <script type="module" src="./game.js"></script>
+  </body>
+</html>
