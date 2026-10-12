@@ -72,6 +72,14 @@ button { color: inherit; }
 .kettle-tab { height: 28px; border: 1px solid var(--line); background: transparent; color: var(--muted); font: 500 10px "DM Mono"; cursor: pointer; }
 .kettle-tab.active { border-color: var(--green); color: #162116; background: var(--green); }
 .kettle-tab.hot:not(.active) { color: var(--orange); border-color: #ff9b5680; }
+.pot-rack { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
+.pot-rack-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: var(--muted); font: 500 8px "DM Mono"; letter-spacing: .1em; }
+.pot-rack-label b { color: var(--green); font-size: 9px; }
+.pot-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.pot-tab { height: 27px; padding: 0; border: 1px solid var(--line); color: var(--muted); background: transparent; font: 500 9px "DM Mono"; cursor: pointer; }
+.pot-tab.active { border-color: var(--orange); color: #1b1712; background: var(--orange); }
+.pot-tab.busy:not(.active) { border-color: #b7ee6866; color: var(--green); }
+.target-line { margin: 8px 0 0; color: var(--orange); font: 500 10px "DM Mono"; text-align: right; }
 
 .controls { position: fixed; z-index: 5; left: 50%; bottom: 35px; display: flex; gap: 8px; transform: translateX(-50%); }
 .action-button { min-width: 145px; height: 60px; display: flex; align-items: center; gap: 12px; padding: 0 17px; border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(14px); cursor: pointer; text-align: left; transition: transform .15s, filter .15s; }
@@ -143,6 +151,10 @@ h1 em { color: var(--green); font-style: normal; }
   .order-time { display: block; margin-top: 2px; font-size: 8px; }
   .kettle-panel { top: auto; right: 12px; bottom: 76px; width: calc(100% - 24px); }
   .kettle-panel .readout, .kettle-panel .temperature-track, .kettle-panel .state-line { display: none; }
+  .pot-rack { margin-top: 8px; padding-top: 8px; }
+  .pot-tabs { grid-template-columns: repeat(8, 1fr); }
+  .pot-tab { height: 24px; }
+  .pot-rack-label, .target-line { display: none; }
   .panel-label { margin-bottom: 8px; }
   .controls { z-index: 6; }
   .rules span { font-size: 9px; }

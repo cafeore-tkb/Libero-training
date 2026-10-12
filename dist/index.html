@@ -13,7 +13,7 @@
   </head>
   <body>
     <main id="app">
-      <canvas id="scene" aria-label="5台の電気ケトルと6つのコーヒーポットが並ぶ3D作業台"></canvas>
+      <canvas id="scene" aria-label="5台の電気ケトルと8個の共有コーヒーポットが並ぶ3D作業台"></canvas>
 
       <header class="topbar">
         <a class="brand" href="#" aria-label="LIBERO ホーム">
@@ -31,7 +31,7 @@
       </section>
 
       <aside class="orders-panel">
-        <div class="panel-label"><span>6 DRIPPERS / POT</span><b id="order-count">0</b></div>
+        <div class="panel-label"><span>6 DRIPPERS</span><b id="order-count">0</b></div>
         <div id="orders" class="orders"></div>
       </aside>
 
@@ -44,12 +44,17 @@
         <div class="temperature-track"><i id="temp-bar"></i><em>100°</em></div>
         <p id="selected-state" class="state-line">空 — 給水してください</p>
         <div class="kettle-tabs" id="kettle-tabs" aria-label="ケトル選択"></div>
+        <div class="pot-rack">
+          <div class="pot-rack-label"><span>SHARED COFFEE POTS</span><b id="available-pots">8/8</b></div>
+          <div class="pot-tabs" id="pot-tabs" aria-label="共有コーヒーポット選択"></div>
+          <p id="target-line" class="target-line">D01 → P01</p>
+        </div>
       </aside>
 
       <section class="controls" aria-label="操作パネル">
         <button id="fill-button" class="action-button secondary"><kbd>F</kbd><span><small>STEP 01</small>給水する</span></button>
         <button id="heat-button" class="action-button primary"><kbd>SPACE</kbd><span><small>STEP 02</small>沸かす</span></button>
-        <button id="serve-button" class="action-button accent"><kbd>S</kbd><span><small>STEP 03</small>ポットへ注ぐ</span></button>
+        <button id="serve-button" class="action-button accent"><kbd>S</kbd><span><small>STEP 03</small>選択ポットへ注ぐ</span></button>
       </section>
 
       <div class="hint"><span>ドラッグ</span> 視点移動 <i></i> <span>1—5</span> ケトル選択</div>
@@ -60,11 +65,11 @@
         <div class="modal-card">
           <p class="eyebrow">COFFEE FESTIVAL / ROLE TRAINING</p>
           <h1>湯を切らすな。<br /><em>店の流れ</em>を守れ。</h1>
-          <p class="lead">あなたはコーヒー店舗の遊撃手「リベロ」。5台のケトルを回し、6人のドリッパーが待つコーヒーポットへ92°C以上のお湯を届けよう。</p>
+          <p class="lead">あなたはコーヒー店舗の遊撃手「リベロ」。5台のケトルを回し、6人のドリッパーから届く要求に、8個の共有コーヒーポットで応えよう。</p>
           <div class="rules">
             <div><b>01</b><span>ケトルを選び<br />1.2L給水</span></div>
             <div><b>02</b><span>スイッチON<br />沸騰を監視</span></div>
-            <div><b>03</b><span>担当ポットへ<br />900ml注ぐ</span></div>
+            <div><b>03</b><span>空きポットを選び<br />900ml注ぐ</span></div>
           </div>
           <button id="start-button" class="start-button">シフト開始 <span>→</span></button>
           <small class="safety">※ 空焚き・沸騰放置は減点。90秒のスコアアタックです。</small>
