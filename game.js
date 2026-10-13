@@ -14,7 +14,8 @@ const camera = new THREE.PerspectiveCamera(39, innerWidth / innerHeight, 0.1, 10
 camera.position.set(0, 6.2, 10.8);
 camera.lookAt(0, 1.25, 0);
 
-scene.add(new THREE.HemisphereLight(0xd9f2df, 0x172019, 2.2));
+const hemisphere = new THREE.HemisphereLight(0xd9f2df, 0x172019, 2.2);
+scene.add(hemisphere);
 const keyLight = new THREE.DirectionalLight(0xffe4c1, 3.6);
 keyLight.position.set(-4, 8, 5);
 keyLight.castShadow = true;
@@ -165,13 +166,33 @@ const ROOM_TEMP = 22;
 const FILL_RATE = .25;
 const HEAT_POWER = 13.8;
 const KETTLE_COOL_RATE = .25;
-const state = { running: false, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true };
+const DIFFICULTIES = {
+  easy: { label: "EASY", kettles: 2, drippers: 3 },
+  normal: { label: "NORMAL", kettles: 3, drippers: 4 },
+  hard: { label: "HARD", kettles: 4, drippers: 5 },
+  "death-march": { label: "DEATH MARCH", kettles: 5, drippers: 6 }
+};
+const TIME_SLOTS = {
+  morning: { label: "MORNING", range: "10:00—11:30", pace: "CALM", orderMin: 6, orderMax: 8, waitMin: 45, waitMax: 55, fog: 0x1c3027, key: 0xffedc8, rim: 0xb7ee68, exposure: 1.12 },
+  lunch: { label: "LUNCH", range: "11:30—13:00", pace: "RUSH", orderMin: 3, orderMax: 4.5, waitMin: 35, waitMax: 45, fog: 0x14251e, key: 0xffe4c1, rim: 0xff9b56, exposure: 1.08 },
+  afternoon: { label: "AFTERNOON", range: "13:00—15:00", pace: "STEADY", orderMin: 4.5, orderMax: 6, waitMin: 40, waitMax: 50, fog: 0x18251f, key: 0xffcf9c, rim: 0xb7ee68, exposure: 1.02 },
+  closing: { label: "CLOSING", range: "15:00—16:00", pace: "LAST CALL", orderMin: 4, orderMax: 6.5, waitMin: 38, waitMax: 48, fog: 0x111826, key: 0xb9c9ff, rim: 0x728ed2, exposure: .92 }
+};
+const KETTLE_LAYOUTS = {
+  2: [[1.7, -.2], [3.5, -.2]],
+  3: [[1.15, .5], [2.45, -.72], [3.75, .5]],
+  4: [[.75, .5], [1.85, -.72], [3.05, -.72], [4.15, .5]],
+  5: [[.45, .55], [1.45, -.8], [2.45, .05], [3.45, -.8], [4.45, .55]]
+};
+const state = { running: false, difficulty: "normal", timeSlot: "afternoon", activeKettles: 3, activeDrippers: 4, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true };
 const $ = (q) => document.querySelector(q);
 const ui = {
   score: $("#score"), combo: $("#combo"), timer: $("#timer"), orders: $("#orders"), count: $("#order-count"),
   number: $("#selected-number"), temp: $("#selected-temp"), water: $("#selected-water"), tempBar: $("#temp-bar"), state: $("#selected-state"),
   tabs: $("#kettle-tabs"), potQueue: $("#pot-queue"), availablePots: $("#available-pots"), target: $("#target-line"),
-  fill: $("#fill-button"), heat: $("#heat-button"), returnWater: $("#return-button"), serve: $("#serve-button"), toast: $("#toast")
+  fill: $("#fill-button"), heat: $("#heat-button"), returnWater: $("#return-button"), serve: $("#serve-button"), toast: $("#toast"),
+  shiftStatus: $("#shift-status"), dripperLabel: $("#dripper-label"), kettleShortcuts: $("#kettle-shortcuts"), setupLead: $("#setup-lead"),
+  difficultySummary: $("#difficulty-summary"), timeSummary: $("#time-summary"), resultMode: $("#result-mode")
 };
 
 for (let i = 0; i < 5; i++) {
@@ -186,7 +207,59 @@ for (let i = 0; i < 8; i++) {
   ui.potQueue.append(slot);
 }
 
+function applyConfiguration() {
+  const difficulty = DIFFICULTIES[state.difficulty];
+  const slot = TIME_SLOTS[state.timeSlot];
+  state.activeKettles = difficulty.kettles;
+  state.activeDrippers = difficulty.drippers;
+  if (state.selected >= state.activeKettles) state.selected = 0;
+  if (state.selectedDripper >= state.activeDrippers) state.selectedDripper = 0;
+
+  const layout = KETTLE_LAYOUTS[state.activeKettles];
+  kettleData.forEach((kettle, index) => {
+    const active = index < state.activeKettles;
+    kettle.group.visible = active;
+    if (active) {
+      kettle.group.position.x = layout[index][0];
+      kettle.group.position.z = layout[index][1];
+    }
+  });
+  [...ui.tabs.children].forEach((tab, index) => { tab.hidden = index >= state.activeKettles; });
+  ui.tabs.style.gridTemplateColumns = `repeat(${state.activeKettles}, 1fr)`;
+  ui.orders.style.setProperty("--drippers", state.activeDrippers);
+  ui.dripperLabel.textContent = `${state.activeDrippers} DRIPPERS`;
+  ui.kettleShortcuts.textContent = state.activeKettles === 1 ? "1" : `1—${state.activeKettles}`;
+  ui.shiftStatus.innerHTML = `<span class="live-dot"></span>${difficulty.label} / ${slot.label} ${slot.range}`;
+  canvas.setAttribute("aria-label", `右側に配置された${state.activeKettles}台の電気ケトルと、左側に並ぶコーヒーポットキューの3D作業台`);
+
+  scene.fog.color.setHex(slot.fog);
+  keyLight.color.setHex(slot.key);
+  rim.color.setHex(slot.rim);
+  hemisphere.intensity = state.timeSlot === "closing" ? 1.65 : 2.2;
+  renderer.toneMappingExposure = slot.exposure;
+  document.body.dataset.timeSlot = state.timeSlot;
+}
+
+function updateSetupUI() {
+  const difficulty = DIFFICULTIES[state.difficulty];
+  const slot = TIME_SLOTS[state.timeSlot];
+  document.querySelectorAll("[data-difficulty]").forEach(button => {
+    const selected = button.dataset.difficulty === state.difficulty;
+    button.classList.toggle("selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
+  document.querySelectorAll("[data-time-slot]").forEach(button => {
+    const selected = button.dataset.timeSlot === state.timeSlot;
+    button.classList.toggle("selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
+  ui.setupLead.textContent = `${difficulty.kettles}台のケトルを回し、${difficulty.drippers}人のドリッパーから届く要求に応えよう。`;
+  ui.difficultySummary.textContent = `${difficulty.kettles} KETTLES / ${difficulty.drippers} DRIPPERS`;
+  ui.timeSummary.textContent = `${slot.pace} — 注文間隔 ${slot.orderMin}〜${slot.orderMax}秒 / 待ち時間 ${slot.waitMin}〜${slot.waitMax}秒`;
+}
+
 function selectKettle(index) {
+  if (index < 0 || index >= state.activeKettles) return;
   if (state.filling) endFill();
   state.selected = index;
   kettleData.forEach((k, i) => { k.selector.material.opacity = i === index ? .9 : 0; });
@@ -194,6 +267,7 @@ function selectKettle(index) {
 }
 
 function selectDripper(index) {
+  if (index < 0 || index >= state.activeDrippers) return;
   state.selectedDripper = index;
   updateUI();
 }
@@ -205,12 +279,13 @@ function toast(message, error = false) {
 }
 
 function addOrder() {
-  if (state.orders.length >= 6) return;
+  if (state.orders.length >= state.activeDrippers) return;
   const occupied = new Set(state.orders.map(order => order.dripper));
-  const available = Array.from({ length: 6 }, (_, index) => index).filter(index => !occupied.has(index));
+  const available = Array.from({ length: state.activeDrippers }, (_, index) => index).filter(index => !occupied.has(index));
   if (!available.length) return;
   const dripper = available[Math.floor(Math.random() * available.length)];
-  const max = 35 + Math.floor(Math.random() * 16);
+  const slot = TIME_SLOTS[state.timeSlot];
+  const max = Math.round(slot.waitMin + Math.random() * (slot.waitMax - slot.waitMin));
   state.orders.push({ id: state.orderId++, dripper, time: max, max, overdue: false });
   if (state.orders.length === 1) state.selectedDripper = dripper;
 }
@@ -290,9 +365,12 @@ function serveSelected() {
 }
 
 function resetGame() {
-  Object.assign(state, { running: true, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: .6 });
+  const difficulty = DIFFICULTIES[state.difficulty];
+  Object.assign(state, { running: true, activeKettles: difficulty.kettles, activeDrippers: difficulty.drippers, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: .6 });
   kettleData.forEach(k => Object.assign(k, { water: 0, temp: 22, state: "empty", boilTime: 0, pourAnim: 0 }));
   potData.forEach(pot => Object.assign(pot, { water: 0, temp: 22, waterLevel: 0, flash: 0, returnAnim: 0, busyTime: 0, assignedDripper: null }));
+  ui.orders.replaceChildren();
+  applyConfiguration();
   $("#intro").classList.remove("show"); $("#result").classList.remove("show");
   selectKettle(0); updateUI();
 }
@@ -302,13 +380,14 @@ function endGame() {
   state.running = false;
   const rank = state.score >= 1800 ? "S" : state.score >= 1200 ? "A" : state.score >= 700 ? "B" : "C";
   $("#result-rank").textContent = `RANK ${rank}`;
+  ui.resultMode.textContent = `${DIFFICULTIES[state.difficulty].label} / ${TIME_SLOTS[state.timeSlot].label} ${TIME_SLOTS[state.timeSlot].range}`;
   $("#result-copy").textContent = rank === "S" ? "完璧な先読み。店のリズムを最後まで守りました。" : rank === "A" ? "ナイスリベロ！あと少しで達人級です。" : "ケトルの残量と注文の残り時間を先読みしてみよう。";
   $("#final-score").textContent = state.score; $("#final-served").textContent = state.served; $("#final-combo").textContent = state.bestCombo;
   $("#result").classList.add("show");
 }
 
 function renderOrders() {
-  for (let dripperIndex = 0; dripperIndex < 6; dripperIndex++) {
+  for (let dripperIndex = 0; dripperIndex < state.activeDrippers; dripperIndex++) {
     const order = state.orders.find(item => item.dripper === dripperIndex);
     let element = ui.orders.querySelector(`[data-dripper-index="${dripperIndex}"]`);
     if (!element) {
@@ -380,7 +459,11 @@ function tick(now) {
   if (state.running) {
     state.time = Math.max(0, state.time - rawDt);
     state.nextOrder -= rawDt;
-    if (state.nextOrder <= 0) { addOrder(); state.nextOrder = Math.max(2.5, 5.1 - (90 - state.time) * .025) + Math.random() * 1.4; }
+    if (state.nextOrder <= 0) {
+      addOrder();
+      const slot = TIME_SLOTS[state.timeSlot];
+      state.nextOrder = slot.orderMin + Math.random() * (slot.orderMax - slot.orderMin);
+    }
     let newlyOverdue = 0;
     state.orders.forEach(order => {
       if (order.overdue) return;
@@ -411,6 +494,7 @@ function tick(now) {
     }
 
     kettleData.forEach(k => {
+      if (k.index >= state.activeKettles) return;
       if (k.state === "heating") {
         k.temp = Math.min(100, k.temp + (HEAT_POWER / Math.max(k.water, .05)) * rawDt);
         if (k.temp >= 99.5) { k.temp = 100; k.state = "ready"; }
@@ -477,7 +561,7 @@ const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
 canvas.addEventListener("pointerdown", (e) => {
   pointer.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
-  const hit = raycaster.intersectObjects(clickable)[0];
+  const hit = raycaster.intersectObjects(clickable).find(item => item.object.userData.index < state.activeKettles);
   if (hit) selectKettle(hit.object.userData.index);
 });
 
@@ -491,7 +575,7 @@ addEventListener("pointermove", e => {
 });
 
 addEventListener("keydown", e => {
-  if (/^[1-5]$/.test(e.key)) selectKettle(Number(e.key) - 1);
+  if (/^[1-5]$/.test(e.key) && Number(e.key) <= state.activeKettles) selectKettle(Number(e.key) - 1);
   if (e.key.toLowerCase() === "f" && !e.repeat) beginFill();
   if (e.key.toLowerCase() === "r") returnWaterToKettle();
   if (e.key.toLowerCase() === "s") serveSelected();
@@ -509,9 +593,33 @@ ui.fill.addEventListener("contextmenu", e => e.preventDefault());
 addEventListener("pointerup", endFill);
 ui.heat.onclick = heatSelected; ui.returnWater.onclick = returnWaterToKettle; ui.serve.onclick = serveSelected;
 $("#start-button").onclick = resetGame; $("#restart-button").onclick = resetGame;
+$("#change-settings-button").onclick = () => {
+  endFill();
+  state.running = false;
+  $("#result").classList.remove("show");
+  $("#intro").classList.add("show");
+  updateSetupUI();
+};
+document.querySelectorAll("[data-difficulty]").forEach(button => {
+  button.onclick = () => {
+    state.difficulty = button.dataset.difficulty;
+    state.orders = [];
+    ui.orders.replaceChildren();
+    applyConfiguration();
+    updateSetupUI();
+    selectKettle(0);
+  };
+});
+document.querySelectorAll("[data-time-slot]").forEach(button => {
+  button.onclick = () => {
+    state.timeSlot = button.dataset.timeSlot;
+    applyConfiguration();
+    updateSetupUI();
+  };
+});
 $("#sound-toggle").onclick = (e) => { state.sound = !state.sound; e.currentTarget.classList.toggle("muted", !state.sound); };
 
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
 }
-addEventListener("resize", resize); resize(); selectKettle(0); updateUI(); requestAnimationFrame(tick);
+addEventListener("resize", resize); resize(); applyConfiguration(); updateSetupUI(); selectKettle(0); updateUI(); requestAnimationFrame(tick);
