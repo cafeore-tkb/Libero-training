@@ -126,10 +126,10 @@ button { color: inherit; }
 h1 { margin: 17px 0 18px; font-size: clamp(35px, 6vw, 59px); line-height: 1.12; letter-spacing: -.06em; }
 h1 em { color: var(--green); font-style: normal; }
 .lead { color: #b6c1ba; font-size: 13px; line-height: 1.9; }
-.setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
+.setup-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 20px 0; }
 .setup-group { min-width: 0; margin: 0; padding: 11px; border: 1px solid var(--line); }
 .setup-group legend { padding: 0 7px; color: var(--green); font: 500 9px "DM Mono"; letter-spacing: .14em; }
-.option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.option-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .setup-option { min-width: 0; padding: 9px 8px; border: 1px solid var(--line); color: var(--muted); background: #0f1b16; cursor: pointer; text-align: left; transition: border-color .15s, background .15s, transform .15s; }
 .setup-option:hover { border-color: #b7ee6870; transform: translateY(-1px); }
 .setup-option b, .setup-option small { display: block; font-family: "DM Mono"; }
@@ -201,5 +201,6 @@ h1 em { color: var(--green); font-style: normal; }
   .rules span { font-size: 9px; }
   .modal { place-items: start center; padding: 12px; }
   .intro-card h1 { font-size: 30px; }
+  .option-grid { grid-template-columns: 1fr 1fr; }
   .setup-option { padding: 8px 7px; }
 }
