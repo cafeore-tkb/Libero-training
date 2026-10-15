@@ -214,10 +214,10 @@ const KETTLE_LAYOUTS = {
   4: [[.75, .5], [1.85, -.72], [3.05, -.72], [4.15, .5]],
   5: [[.45, .55], [1.45, -.8], [2.45, .05], [3.45, -.8], [4.45, .55]]
 };
-const state = { running: false, difficulty: "normal", timeSlot: "afternoon", activeKettles: 3, activeDrippers: 4, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true };
+const state = { running: false, difficulty: "normal", timeSlot: "afternoon", activeKettles: 3, activeDrippers: 4, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, achievement: 100, flowStarted: false, flowTime: 0, blockedTime: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true };
 const $ = (q) => document.querySelector(q);
 const ui = {
-  score: $("#score"), combo: $("#combo"), timer: $("#timer"), orders: $("#orders"), count: $("#order-count"),
+  achievement: $("#achievement"), combo: $("#combo"), timer: $("#timer"), orders: $("#orders"), count: $("#order-count"),
   number: $("#selected-number"), temp: $("#selected-temp"), water: $("#selected-water"), tempBar: $("#temp-bar"), state: $("#selected-state"),
   tabs: $("#kettle-tabs"), potQueue: $("#pot-queue"), availablePots: $("#available-pots"), target: $("#target-line"),
   fill: $("#fill-button"), heat: $("#heat-button"), returnWater: $("#return-button"), serve: $("#serve-button"), toast: $("#toast"),
@@ -317,6 +317,7 @@ function addOrder() {
   const slot = TIME_SLOTS[state.timeSlot];
   const max = Math.round(slot.waitMin + Math.random() * (slot.waitMax - slot.waitMin));
   state.orders.push({ id: state.orderId++, dripper, time: max, max, overdue: false });
+  state.flowStarted = true;
   if (state.orders.length === 1) state.selectedDripper = dripper;
 }
 
@@ -341,7 +342,7 @@ function heatSelected() {
   if (!state.running) return;
   endFill();
   const k = kettleData[state.selected];
-  if (k.water <= 0) { state.score = Math.max(0, state.score - 50); state.combo = 1; toast("空焚き！ −50", true); return; }
+  if (k.water <= 0) { state.combo = 1; toast("空焚き！", true); return; }
   if (k.state === "heating") { k.state = k.temp >= 92 ? "ready" : "filled"; toast("加熱を停止"); }
   else { k.state = "heating"; toast(`KETTLE 0${k.index + 1} — 加熱開始`); }
   updateUI();
@@ -380,23 +381,21 @@ function serveSelected() {
   const orderIndex = state.orders.findIndex(order => order.dripper === state.selectedDripper);
   if (orderIndex < 0) return toast(`DRIPPER 0${state.selectedDripper + 1} は待機中です`, true);
   if (k.water + .001 < .9) return toast("水量不足 — 900ml必要", true);
-  if (k.temp < 92) { state.score = Math.max(0, state.score - 30); state.combo = 1; toast(`${Math.round(k.temp)}°C — まだぬるい！ −30`, true); return; }
+  if (k.temp < 92) { state.combo = 1; toast(`${Math.round(k.temp)}°C — まだぬるい！`, true); return; }
   const [order] = state.orders.splice(orderIndex, 1);
-  const speedBonus = Math.round(order.time * 4);
-  const points = 100 + speedBonus + (state.combo - 1) * 20;
-  state.score += points; state.served++; state.combo++; state.bestCombo = Math.max(state.bestCombo, state.combo);
+  state.served++; state.combo++; state.bestCombo = Math.max(state.bestCombo, state.combo);
   k.water = Math.max(0, Math.round((k.water - .9) * 100) / 100);
   k.temp = Math.max(22, k.temp - 8);
   k.state = k.water > 0 ? (k.temp >= 92 ? "ready" : "filled") : "empty";
   k.boilTime = 0; k.pourAnim = 1;
   pot.water = .9; pot.temp = k.temp + 8; pot.waterLevel = 1; pot.flash = 1; pot.busyTime = 7; pot.assignedDripper = order.dripper;
   state.potQueue.splice(emptyQueueIndex, 1);
-  toast(`D0${order.dripper + 1} ← NEXT POT / 900ml完了 +${points}`); updateUI();
+  toast(`D0${order.dripper + 1} ← NEXT POT / 900ml提供完了`); updateUI();
 }
 
 function resetGame() {
   const difficulty = DIFFICULTIES[state.difficulty];
-  Object.assign(state, { running: true, activeKettles: difficulty.kettles, activeDrippers: difficulty.drippers, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, score: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: .6 });
+  Object.assign(state, { running: true, activeKettles: difficulty.kettles, activeDrippers: difficulty.drippers, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, achievement: 100, flowStarted: false, flowTime: 0, blockedTime: 0, combo: 1, bestCombo: 1, served: 0, orderId: 1, orders: [], nextOrder: .6 });
   kettleData.forEach(k => Object.assign(k, { water: 0, temp: 22, state: "empty", boilTime: 0, pourAnim: 0 }));
   potData.forEach(pot => Object.assign(pot, { water: 0, temp: 22, waterLevel: 0, flash: 0, returnAnim: 0, busyTime: 0, assignedDripper: null }));
   ui.orders.replaceChildren();
@@ -408,11 +407,11 @@ function resetGame() {
 function endGame() {
   endFill();
   state.running = false;
-  const rank = state.score >= 1800 ? "S" : state.score >= 1200 ? "A" : state.score >= 700 ? "B" : "C";
+  const rank = state.achievement >= 95 ? "S" : state.achievement >= 85 ? "A" : state.achievement >= 70 ? "B" : "C";
   $("#result-rank").textContent = `RANK ${rank}`;
   ui.resultMode.textContent = `${DIFFICULTIES[state.difficulty].label} / ${TIME_SLOTS[state.timeSlot].label} ${TIME_SLOTS[state.timeSlot].range}`;
-  $("#result-copy").textContent = rank === "S" ? "完璧な先読み。店のリズムを最後まで守りました。" : rank === "A" ? "ナイスリベロ！あと少しで達人級です。" : "ケトルの残量と注文の残り時間を先読みしてみよう。";
-  $("#final-score").textContent = state.score; $("#final-served").textContent = state.served; $("#final-combo").textContent = state.bestCombo;
+  $("#result-copy").textContent = rank === "S" ? "完璧な先読み。お湯の流れを最後まで止めませんでした。" : rank === "A" ? "ナイスリベロ！ほぼ滞りなく提供できました。" : "時間超過を減らし、お湯を止めずに届けよう。";
+  $("#final-achievement").textContent = `${state.achievement}%`; $("#final-served").textContent = state.served; $("#final-combo").textContent = state.bestCombo;
   $("#result").classList.add("show");
 }
 
@@ -443,7 +442,7 @@ function renderOrders() {
 
 function updateUI() {
   const k = kettleData[state.selected];
-  ui.score.textContent = String(state.score).padStart(4, "0"); ui.combo.textContent = `×${state.combo}`;
+  ui.achievement.textContent = `${state.achievement}%`; ui.achievement.parentElement.classList.toggle("warning", state.achievement < 80); ui.combo.textContent = `×${state.combo}`;
   ui.number.textContent = `0${k.index + 1}`; ui.temp.innerHTML = `${Math.round(k.temp)}<small>°C</small>`; ui.water.innerHTML = `${k.water.toFixed(2)}<small>L</small>`;
   ui.tempBar.style.width = `${Math.min(100, Math.max(0, (k.temp - 20) / 80 * 100))}%`;
   const labels = { empty: "空 — 給水してください", filled: "待機中 — 加熱できます", heating: "加熱中 — 温度上昇", ready: "準備完了 — 提供できます" };
@@ -501,9 +500,13 @@ function tick(now) {
       if (order.time <= 0) { order.overdue = true; newlyOverdue++; }
     });
     if (newlyOverdue) {
-      state.score = Math.max(0, state.score - newlyOverdue * 80);
       state.combo = 1;
-      toast(`時間超過 — 注文を保持中 −${newlyOverdue * 80}`, true);
+      toast("時間超過 — 達成度が低下中", true);
+    }
+    if (state.flowStarted) {
+      state.flowTime += rawDt;
+      if (state.orders.some(order => order.overdue)) state.blockedTime += rawDt;
+      state.achievement = Math.max(0, Math.round((1 - state.blockedTime / state.flowTime) * 100));
     }
 
     if (state.filling && state.fillKettle !== null) {
@@ -532,7 +535,7 @@ function tick(now) {
       if (k.state === "ready" && k.temp < 92) k.state = "filled";
       if (k.temp >= 99.5) {
         k.boilTime += rawDt;
-        if (k.boilTime > 9) { state.score = Math.max(0, state.score - 20); k.boilTime = 5; toast("沸騰放置 −20", true); }
+        if (k.boilTime > 9) { k.boilTime = 5; toast("沸騰放置 — 火傷に注意", true); }
       } else k.boilTime = 0;
       k.led.material.emissive.setHex(k.state === "heating" ? 0xff541f : k.temp >= 92 ? 0xb7ee68 : 0x000000);
       k.led.material.emissiveIntensity = k.state === "heating" || k.temp >= 92 ? 4 : 0;

@@ -25,7 +25,7 @@
       </header>
 
       <section class="scoreboard" aria-label="ゲーム状況">
-        <div class="metric"><span>SCORE</span><strong id="score">0000</strong></div>
+        <div class="metric achievement" title="最初の注文後、時間超過注文なしで稼働できた時間の割合"><span>達成度</span><strong id="achievement">100%</strong></div>
         <div class="metric combo"><span>COMBO</span><strong id="combo">×1</strong></div>
         <div class="timer" id="timer"><span>SHIFT</span><strong>01:30</strong></div>
       </section>
@@ -96,7 +96,7 @@
             <div><b>04</b><span>次の空ポットへ<br />900ml注ぐ</span></div>
           </div>
           <button id="start-button" class="start-button">シフト開始 <span>→</span></button>
-          <small class="safety">※ 加熱出力は一定。水が少ないほど温度は速く上がります。</small>
+          <small class="safety">※ 加熱出力は一定。水が少ないほど温度は速く上がります。達成度は、時間超過注文なしで稼働できた時間の割合です。</small>
         </div>
       </section>
 
@@ -107,7 +107,7 @@
           <p id="result-mode" class="result-mode">NORMAL / AFTERNOON</p>
           <p id="result-copy" class="lead"></p>
           <div class="result-grid">
-            <div><span>最終スコア</span><b id="final-score">0</b></div>
+            <div><span>最終達成度</span><b id="final-achievement">100%</b></div>
             <div><span>提供数</span><b id="final-served">0</b></div>
             <div><span>最高コンボ</span><b id="final-combo">0</b></div>
           </div>
