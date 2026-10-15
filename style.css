@@ -53,11 +53,16 @@ button { color: inherit; }
 .orders { display: grid; gap: 8px; }
 .order { position: relative; overflow: hidden; width: 100%; display: flex; align-items: center; gap: 11px; padding: 9px 11px; border: 1px solid var(--line); color: var(--ink); background: var(--panel); backdrop-filter: blur(14px); animation: slide-in .25s ease-out both; cursor: pointer; text-align: left; transition: border-color .15s, background .15s, opacity .15s; }
 .order::after { content:""; position:absolute; left:0; bottom:0; height:2px; width:var(--life); background:var(--green); transition:width .2s linear; }
-.order.urgent::after { background: var(--danger); }
+.order.active { box-shadow: inset 3px 0 var(--orange); }
+.order.delayed { border-color: #ff9b565f; background: rgba(48, 38, 27, .92); }
+.order.delayed::after { background: var(--orange); }
+.order.delayed .order-time, .order.delayed .order-no { color: var(--orange); }
+.order.critical { border-color: #ff655f80; background: rgba(58, 29, 26, .93); }
+.order.critical::after { background: var(--danger); }
+.order.critical .order-time, .order.critical .order-no { color: var(--danger); }
 .order.overdue { border-color: #ff655f99; background: rgba(68, 27, 24, .94); }
 .order.overdue::after { display: none; }
 .order.overdue .order-time, .order.overdue .order-no { color: var(--danger); }
-.order.active { border-color: var(--orange); background: rgba(43, 47, 34, .94); }
 .order.idle { opacity: .48; }
 .order.idle::after { display: none; }
 .order-no { color: var(--green); font: 500 11px "DM Mono"; }

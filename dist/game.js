@@ -197,16 +197,22 @@ const FILL_RATE = .25;
 const HEAT_POWER = 13.8;
 const KETTLE_COOL_RATE = .25;
 const DIFFICULTIES = {
-  easy: { label: "EASY", kettles: 2, drippers: 3 },
-  normal: { label: "NORMAL", kettles: 3, drippers: 4 },
-  hard: { label: "HARD", kettles: 4, drippers: 5 },
-  "death-march": { label: "DEATH MARCH", kettles: 5, drippers: 6 }
+  easy: { label: "EASY", kettles: 2, drippers: 3, orderStages: [26, 18, 12] },
+  normal: { label: "NORMAL", kettles: 3, drippers: 4, orderStages: [20, 14, 10] },
+  hard: { label: "HARD", kettles: 4, drippers: 5, orderStages: [15, 11, 8] },
+  "death-march": { label: "DEATH MARCH", kettles: 5, drippers: 6, orderStages: [11, 8, 6] }
 };
+const ORDER_STAGES = [
+  { key: "on-time", label: "ON TIME" },
+  { key: "delayed", label: "DELAYED" },
+  { key: "critical", label: "CRITICAL" },
+  { key: "overdue", label: "OVERDUE" }
+];
 const TIME_SLOTS = {
-  morning: { label: "MORNING", range: "10:00—11:30", pace: "CALM", orderMin: 6, orderMax: 8, waitMin: 45, waitMax: 55, fog: 0x1c3027, key: 0xffedc8, rim: 0xb7ee68, exposure: 1.12 },
-  lunch: { label: "LUNCH", range: "11:30—13:00", pace: "RUSH", orderMin: 3, orderMax: 4.5, waitMin: 35, waitMax: 45, fog: 0x14251e, key: 0xffe4c1, rim: 0xff9b56, exposure: 1.08 },
-  afternoon: { label: "AFTERNOON", range: "13:00—15:00", pace: "STEADY", orderMin: 4.5, orderMax: 6, waitMin: 40, waitMax: 50, fog: 0x18251f, key: 0xffcf9c, rim: 0xb7ee68, exposure: 1.02 },
-  closing: { label: "CLOSING", range: "15:00—16:00", pace: "LAST CALL", orderMin: 4, orderMax: 6.5, waitMin: 38, waitMax: 48, fog: 0x111826, key: 0xb9c9ff, rim: 0x728ed2, exposure: .92 }
+  morning: { label: "MORNING", range: "10:00—11:30", pace: "CALM", orderMin: 6, orderMax: 8, fog: 0x1c3027, key: 0xffedc8, rim: 0xb7ee68, exposure: 1.12 },
+  lunch: { label: "LUNCH", range: "11:30—13:00", pace: "RUSH", orderMin: 3, orderMax: 4.5, fog: 0x14251e, key: 0xffe4c1, rim: 0xff9b56, exposure: 1.08 },
+  afternoon: { label: "AFTERNOON", range: "13:00—15:00", pace: "STEADY", orderMin: 4.5, orderMax: 6, fog: 0x18251f, key: 0xffcf9c, rim: 0xb7ee68, exposure: 1.02 },
+  closing: { label: "CLOSING", range: "15:00—16:00", pace: "LAST CALL", orderMin: 4, orderMax: 6.5, fog: 0x111826, key: 0xb9c9ff, rim: 0x728ed2, exposure: .92 }
 };
 const KETTLE_LAYOUTS = {
   2: [[1.7, -.2], [3.5, -.2]],
@@ -284,8 +290,9 @@ function updateSetupUI() {
     button.setAttribute("aria-pressed", String(selected));
   });
   ui.setupLead.textContent = `${difficulty.kettles}台のケトルを回し、${difficulty.drippers}人のドリッパーから届く要求に応えよう。`;
-  ui.difficultySummary.textContent = `${difficulty.kettles} KETTLES / ${difficulty.drippers} DRIPPERS`;
-  ui.timeSummary.textContent = `${slot.pace} — 注文間隔 ${slot.orderMin}〜${slot.orderMax}秒 / 待ち時間 ${slot.waitMin}〜${slot.waitMax}秒`;
+  const orderLimit = difficulty.orderStages.reduce((total, seconds) => total + seconds, 0);
+  ui.difficultySummary.textContent = `${difficulty.kettles} KETTLES / ${difficulty.drippers} DRIPPERS / LIMIT ${orderLimit}s ±10%`;
+  ui.timeSummary.textContent = `${slot.pace} — 注文間隔 ${slot.orderMin}〜${slot.orderMax}秒`;
 }
 
 function selectKettle(index) {
@@ -314,11 +321,22 @@ function addOrder() {
   const available = Array.from({ length: state.activeDrippers }, (_, index) => index).filter(index => !occupied.has(index));
   if (!available.length) return;
   const dripper = available[Math.floor(Math.random() * available.length)];
-  const slot = TIME_SLOTS[state.timeSlot];
-  const max = Math.round(slot.waitMin + Math.random() * (slot.waitMax - slot.waitMin));
-  state.orders.push({ id: state.orderId++, dripper, time: max, max, overdue: false });
+  const difficulty = DIFFICULTIES[state.difficulty];
+  const variance = .9 + Math.random() * .2;
+  const stageDurations = difficulty.orderStages.map(seconds => seconds * variance);
+  const max = stageDurations.reduce((total, seconds) => total + seconds, 0);
+  state.orders.push({ id: state.orderId++, dripper, time: max, max, stageDurations, overdue: false });
   state.flowStarted = true;
   if (state.orders.length === 1) state.selectedDripper = dripper;
+}
+
+function getOrderStage(order) {
+  if (!order) return null;
+  if (order.overdue) return ORDER_STAGES[3];
+  const elapsed = order.max - order.time;
+  if (elapsed < order.stageDurations[0]) return ORDER_STAGES[0];
+  if (elapsed < order.stageDurations[0] + order.stageDurations[1]) return ORDER_STAGES[1];
+  return ORDER_STAGES[2];
 }
 
 function beginFill() {
@@ -429,12 +447,12 @@ function renderOrders() {
       ui.orders.append(element);
     }
     const life = order ? Math.max(0, order.time / order.max * 100) : 0;
+    const stage = getOrderStage(order);
     element.classList.toggle("active", state.selectedDripper === dripperIndex);
     element.classList.toggle("idle", !order);
-    element.classList.toggle("urgent", Boolean(order && !order.overdue && life < 30));
-    element.classList.toggle("overdue", Boolean(order?.overdue));
+    ORDER_STAGES.forEach(item => element.classList.toggle(item.key, stage?.key === item.key));
     element.style.setProperty("--life", `${life}%`);
-    element.querySelector(".order-copy small").textContent = order?.overdue ? "時間超過 / 900ml" : order ? "900ml REQUEST" : "リクエスト待機中";
+    element.querySelector(".order-copy small").textContent = order ? `${stage.label} / 900ml` : "リクエスト待機中";
     element.querySelector(".order-time").textContent = order?.overdue ? "OVER" : order ? `${Math.ceil(order.time)}s` : "—";
   }
   ui.count.textContent = state.orders.length;
