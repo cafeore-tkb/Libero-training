@@ -111,38 +111,68 @@ const POT_QUEUE_POSITIONS = [
 function makeCoffeePot(index, x) {
   const group = new THREE.Group();
   group.position.set(x, 1.47, 1.12);
-  group.scale.setScalar(.68);
+  group.scale.setScalar(.62);
 
-  const steel = new THREE.MeshStandardMaterial({ color: 0xbcc5c0, roughness: .2, metalness: .86 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x171d1a, roughness: .5 });
+  const steel = new THREE.MeshStandardMaterial({ color: 0xdce2df, roughness: .14, metalness: .9 });
+  const polishedSteel = new THREE.MeshStandardMaterial({ color: 0xf2f5f3, roughness: .08, metalness: .96 });
+  const ventDark = new THREE.MeshStandardMaterial({ color: 0x252b28, roughness: .35, metalness: .45 });
   const water = new THREE.MeshStandardMaterial({ color: 0x79b9c5, roughness: .18, transparent: true, opacity: .72 });
+
+  // TAKAHIRO「雫」を思わせる、底が丸く上に向かって絞られた縦長の鏡面ボディ。
   const potProfile = [
-    new THREE.Vector2(.31, 0), new THREE.Vector2(.43, .11), new THREE.Vector2(.46, .62),
-    new THREE.Vector2(.39, .82), new THREE.Vector2(.3, .88), new THREE.Vector2(0, .88)
+    new THREE.Vector2(.36, 0), new THREE.Vector2(.47, .05), new THREE.Vector2(.52, .14),
+    new THREE.Vector2(.52, .34), new THREE.Vector2(.5, .68), new THREE.Vector2(.47, .92),
+    new THREE.Vector2(.42, 1.04), new THREE.Vector2(.34, 1.08), new THREE.Vector2(0, 1.08)
   ];
-  const body = new THREE.Mesh(new THREE.LatheGeometry(potProfile, 24), steel);
-  body.position.y = .08; body.castShadow = true; group.add(body);
-  const lid = new THREE.Mesh(new THREE.CylinderGeometry(.28, .34, .07, 20), dark);
-  lid.position.y = 1; group.add(lid);
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(.08, 12, 8), dark);
-  knob.scale.y = .55; knob.position.y = 1.08; group.add(knob);
+  const body = new THREE.Mesh(new THREE.LatheGeometry(potProfile, 32), steel);
+  body.position.y = .04; body.castShadow = true; body.receiveShadow = true; group.add(body);
+  const baseRim = new THREE.Mesh(new THREE.CylinderGeometry(.48, .5, .065, 32), polishedSteel);
+  baseRim.position.y = .065; baseRim.castShadow = true; group.add(baseRim);
+  const topRim = new THREE.Mesh(new THREE.TorusGeometry(.43, .026, 8, 32), polishedSteel);
+  topRim.rotation.x = Math.PI / 2; topRim.position.y = 1.115; group.add(topRim);
 
-  const neckCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-.37, .56, 0), new THREE.Vector3(-.58, .7, 0),
-    new THREE.Vector3(-.72, 1.02, 0), new THREE.Vector3(-1.02, 1.18, 0)
+  // 広いフランジ、浅いドーム、大きめの丸いつまみ。
+  const lidFlange = new THREE.Mesh(new THREE.CylinderGeometry(.47, .47, .045, 32), polishedSteel);
+  lidFlange.position.y = 1.13; lidFlange.castShadow = true; group.add(lidFlange);
+  const lidDome = new THREE.Mesh(new THREE.SphereGeometry(.4, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), polishedSteel);
+  lidDome.scale.y = .45; lidDome.position.y = 1.145; lidDome.castShadow = true; group.add(lidDome);
+  const knobStem = new THREE.Mesh(new THREE.CylinderGeometry(.07, .085, .075, 18), polishedSteel);
+  knobStem.position.y = 1.345; group.add(knobStem);
+  const knob = new THREE.Mesh(new THREE.CylinderGeometry(.105, .095, .09, 20), polishedSteel);
+  knob.position.y = 1.425; knob.castShadow = true; group.add(knob);
+  const knobTop = new THREE.Mesh(new THREE.SphereGeometry(.098, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), polishedSteel);
+  knobTop.scale.y = .28; knobTop.position.y = 1.47; group.add(knobTop);
+  const vent = new THREE.Mesh(new THREE.SphereGeometry(.022, 10, 8), ventDark);
+  vent.position.set(.21, 1.275, .12); group.add(vent);
+
+  // 本体下部から立ち上がり、先端でわずかに寝る約7mm相当の極細S字注ぎ口。
+  const spoutCollar = new THREE.Mesh(new THREE.CylinderGeometry(.085, .12, .15, 18), polishedSteel);
+  spoutCollar.rotation.z = Math.PI / 2; spoutCollar.position.set(-.49, .37, 0); group.add(spoutCollar);
+  const spoutCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-.5, .37, 0), new THREE.Vector3(-.68, .31, 0),
+    new THREE.Vector3(-.84, .37, 0), new THREE.Vector3(-.93, .58, 0),
+    new THREE.Vector3(-.94, .84, 0), new THREE.Vector3(-.92, 1.03, 0),
+    new THREE.Vector3(-1.03, 1.16, 0), new THREE.Vector3(-1.2, 1.18, 0)
   ]);
-  const neck = new THREE.Mesh(new THREE.TubeGeometry(neckCurve, 24, .055, 9, false), steel);
-  neck.castShadow = true; group.add(neck);
+  const spout = new THREE.Mesh(new THREE.TubeGeometry(spoutCurve, 40, .029, 10, false), polishedSteel);
+  spout.castShadow = true; group.add(spout);
+
+  // ボディの上下へ溶接された、大きなステンレス製ループハンドル。
   const handleCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(.34, .72, 0), new THREE.Vector3(.78, .78, 0),
-    new THREE.Vector3(.82, .25, 0), new THREE.Vector3(.38, .18, 0)
+    new THREE.Vector3(.4, .94, 0), new THREE.Vector3(.7, 1.0, 0),
+    new THREE.Vector3(.94, .86, 0), new THREE.Vector3(1.01, .63, 0),
+    new THREE.Vector3(.96, .4, 0), new THREE.Vector3(.7, .22, 0),
+    new THREE.Vector3(.42, .27, 0)
   ]);
-  const handle = new THREE.Mesh(new THREE.TubeGeometry(handleCurve, 20, .065, 9, false), dark);
-  group.add(handle);
+  const handle = new THREE.Mesh(new THREE.TubeGeometry(handleCurve, 36, .058, 10, false), polishedSteel);
+  handle.castShadow = true; group.add(handle);
+  const upperMount = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, .12, 16), polishedSteel);
+  upperMount.rotation.z = Math.PI / 2; upperMount.position.set(.45, .94, 0); group.add(upperMount);
+  const lowerMount = upperMount.clone(); lowerMount.position.set(.45, .27, 0); group.add(lowerMount);
 
-  const liquid = new THREE.Mesh(new THREE.CylinderGeometry(.34, .38, .55, 18), water);
-  liquid.position.y = .34; liquid.scale.y = .02; liquid.visible = false; group.add(liquid);
-  const requestRing = new THREE.Mesh(new THREE.RingGeometry(.56, .63, 24), new THREE.MeshBasicMaterial({ color: 0xff9b56, side: THREE.DoubleSide, transparent: true, opacity: .12 }));
+  const liquid = new THREE.Mesh(new THREE.CylinderGeometry(.38, .43, .72, 24), water);
+  liquid.position.y = .4; liquid.scale.y = .02; liquid.visible = false; group.add(liquid);
+  const requestRing = new THREE.Mesh(new THREE.RingGeometry(.59, .67, 28), new THREE.MeshBasicMaterial({ color: 0xff9b56, side: THREE.DoubleSide, transparent: true, opacity: .12 }));
   requestRing.rotation.x = -Math.PI / 2; requestRing.position.y = .015; group.add(requestRing);
 
   scene.add(group);
@@ -531,7 +561,7 @@ function tick(now) {
       pot.waterLevel = pot.busyTime > 0 ? .55 + (pot.busyTime / 7) * .45 : pot.water / .9;
       pot.liquid.visible = pot.waterLevel > .01;
       pot.liquid.scale.y = Math.max(.02, pot.waterLevel);
-      pot.liquid.position.y = .1 + .2 * pot.waterLevel;
+      pot.liquid.position.y = .12 + .32 * pot.waterLevel;
       const queueIndex = state.potQueue.indexOf(pot.index);
       pot.group.visible = queueIndex >= 0;
       if (queueIndex >= 0) {
