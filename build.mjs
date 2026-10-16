@@ -5,7 +5,8 @@ await mkdir("dist", { recursive: true });
 await Promise.all([
   cp("index.html", "dist/index.html"),
   cp("style.css", "dist/style.css"),
-  cp("game.js", "dist/game.js")
+  cp("game.js", "dist/game.js"),
+  cp("feedback.js", "dist/feedback.js")
 ]);
 
 console.log("Built static site in dist/");

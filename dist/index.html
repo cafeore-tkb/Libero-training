@@ -21,13 +21,22 @@
           <span><b>LIBERO</b><small>湯沸かし訓練</small></span>
         </a>
         <div id="shift-status" class="shift-status"><span class="live-dot"></span>NORMAL / AFTERNOON</div>
-        <button id="sound-toggle" class="icon-button" aria-label="サウンド切替">♪</button>
+        <div class="feedback-toggles">
+          <button id="effects-toggle" class="icon-button" aria-label="動きのある演出を切り替え" aria-pressed="true" title="動きのある演出 ON/OFF">FX</button>
+          <button id="sound-toggle" class="icon-button" aria-label="効果音を切り替え" aria-pressed="true" title="効果音 ON/OFF">♪</button>
+        </div>
       </header>
 
       <section class="scoreboard" aria-label="ゲーム状況">
         <div class="metric achievement" title="最初の注文後、時間超過注文なしで稼働できた時間の割合"><span>達成度</span><strong id="achievement">100%</strong></div>
-        <div class="metric combo"><span>COMBO</span><strong id="combo">×1</strong></div>
+        <div class="metric combo"><span>CHAIN</span><strong id="combo">0</strong></div>
         <div class="timer" id="timer"><span>SHIFT</span><strong>01:30</strong></div>
+      </section>
+
+      <section id="flow-hud" class="flow-hud" aria-label="連続提供の状況" hidden>
+        <div class="flow-heading"><span id="flow-label">BUILD YOUR FLOW</span><b id="served-volume">0.0 L SERVED</b></div>
+        <div class="flow-track"><i id="flow-bar"></i></div>
+        <small id="flow-hint">時間超過前に3回連続提供で FLOW</small>
       </section>
 
       <aside class="orders-panel">
@@ -61,12 +70,13 @@
       <div class="hint"><span>ドラッグ</span> 視点移動 <i></i> <span id="kettle-shortcuts">1—3</span> ケトル選択</div>
 
       <div id="toast" class="toast" role="status"></div>
+      <div id="feedback-layer" class="feedback-layer" aria-hidden="true"></div>
+      <div id="service-feedback" class="service-feedback" role="status" aria-live="polite" aria-atomic="true"><strong></strong><small></small></div>
 
       <section id="intro" class="modal show" aria-modal="true" role="dialog">
         <div class="modal-card intro-card">
-          <p class="eyebrow">COFFEE FESTIVAL / ROLE TRAINING</p>
+          <p class="eyebrow">SOHOSAI / LIBERO TRAINING</p>
           <h1>湯を切らすな。<br /><em>店の流れ</em>を守れ。</h1>
-          <p id="setup-lead" class="lead">3台のケトルを回し、4人のドリッパーから届く要求に応えよう。</p>
           <div class="setup-grid">
             <fieldset class="setup-group">
               <legend>DIFFICULTY</legend>
@@ -86,7 +96,7 @@
                 <button type="button" class="setup-option selected" data-time-slot="afternoon" aria-pressed="true"><b>AFTERNOON</b><small>13:00—15:00 / 44s</small></button>
                 <button type="button" class="setup-option" data-time-slot="closing" aria-pressed="false"><b>CLOSING</b><small>15:00—16:00 / 34s</small></button>
               </div>
-              <small id="time-summary" class="setup-summary">STEADY — 注文間隔 4.5〜6秒 / LIMIT 44s ±10%</small>
+              <small id="time-summary" class="setup-summary">STEADY — INTERVAL 4.5〜6秒 / LIMIT 44s ±10%</small>
             </fieldset>
           </div>
           <div class="rules">
@@ -95,6 +105,7 @@
             <div><b>03</b><span>キュー先頭の<br />戻り湯を回収</span></div>
             <div><b>04</b><span>次の空ポットへ<br />900ml注ぐ</span></div>
           </div>
+          <p class="feel-tip"><b>FIND YOUR FLOW</b> 定刻・96°C以上で PERFECT。3連続提供から演出が育つ。</p>
           <button id="start-button" class="start-button">シフト開始 <span>→</span></button>
           <small class="safety">※ 加熱出力は一定。水が少ないほど温度は速く上がります。達成度は、時間超過注文なしで稼働できた時間の割合です。</small>
         </div>
@@ -111,6 +122,7 @@
             <div><span>提供数</span><b id="final-served">0</b></div>
             <div><span>最高コンボ</span><b id="final-combo">0</b></div>
           </div>
+          <div class="service-highlights"><span>PERFECT <b id="final-perfect">0</b></span><span>RECOVERY <b id="final-recovery">0</b></span><span>給湯量 <b id="final-volume">0.0 L</b></span></div>
           <button id="restart-button" class="start-button">もう一度挑戦 <span>↻</span></button>
           <button id="change-settings-button" class="text-button">難易度・時間帯を変更</button>
         </div>
