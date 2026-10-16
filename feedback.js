@@ -139,13 +139,13 @@ export function createFeedback({ THREE, scene, camera }) {
     if (Math.abs(camera.fov - fov) > .001) { camera.fov = fov; camera.updateProjectionMatrix(); }
   }
 
-  function countResult(element, value, suffix = "") {
+  function countResult(element, value, suffix = "", digits = 0) {
     cancelAnimationFrame(resultFrame);
     if (!effectsEnabled || motionPreference.matches) { element.textContent = `${value}${suffix}`; return; }
     const started = performance.now();
     const frame = now => {
       const progress = Math.min(1, (now - started) / 900);
-      element.textContent = `${Math.round(value * (1 - (1 - progress) ** 3))}${suffix}`;
+      element.textContent = `${Number((value * (1 - (1 - progress) ** 3)).toFixed(digits))}${suffix}`;
       if (progress < 1) resultFrame = requestAnimationFrame(frame);
     };
     resultFrame = requestAnimationFrame(frame);

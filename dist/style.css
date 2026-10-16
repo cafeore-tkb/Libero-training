@@ -183,6 +183,7 @@ h1 em { color: var(--green); font-style: normal; }
 .feel-tip b { margin-right: 8px; color: var(--green); font: 500 10px "DM Mono"; }
 .service-highlights { display: flex; justify-content: space-around; gap: 9px; margin: -10px 0 24px; color: var(--muted); font: 500 9px "DM Mono"; }
 .service-highlights b { display: block; margin-top: 6px; color: #ffd67d; font-size: 18px; }
+.evaluation-summary { color: var(--muted); font: 500 10px/1.8 "DM Mono", "Noto Sans JP", sans-serif; margin: 8px 0 16px; overflow-wrap: anywhere; }
 .effects-off .flow-hud.in-flow { box-shadow: none; }
 
 @media (prefers-reduced-motion: reduce) {

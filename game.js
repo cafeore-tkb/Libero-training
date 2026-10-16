@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { createFeedback, serviceJudgment } from "./feedback.js";
+import { createServiceCounts, orderStageKey, evaluateService, achievementLabel, achievementValue, serviceRank } from "./evaluation.js";
 
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -222,7 +223,7 @@ const KETTLE_LAYOUTS = {
   4: [[.75, .5], [1.85, -.72], [3.05, -.72], [4.15, .5]],
   5: [[.45, .55], [1.45, -.8], [2.45, .05], [3.45, -.8], [4.45, .55]]
 };
-const state = { running: false, difficulty: "normal", timeSlot: "afternoon", activeKettles: 3, activeDrippers: 4, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, achievement: 100, flowStarted: false, flowTime: 0, blockedTime: 0, combo: 0, bestCombo: 0, served: 0, perfect: 0, recoveries: 0, flowEffect: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true, effects: true };
+const state = { running: false, difficulty: "normal", timeSlot: "afternoon", activeKettles: 3, activeDrippers: 4, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, achievement: null, serviceCounts: createServiceCounts(), combo: 0, bestCombo: 0, served: 0, perfect: 0, recoveries: 0, flowEffect: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true, effects: true };
 const $ = (q) => document.querySelector(q);
 const ui = {
   achievement: $("#achievement"), combo: $("#combo"), timer: $("#timer"), orders: $("#orders"), count: $("#order-count"),
@@ -355,18 +356,13 @@ function addOrder() {
   const stageDurations = slot.orderStages.map(seconds => seconds * variance);
   const max = stageDurations.reduce((total, seconds) => total + seconds, 0);
   state.orders.push({ id: state.orderId++, dripper, time: max, max, stageDurations, overdue: false });
-  state.flowStarted = true;
   if (state.orders.length === 1) state.selectedDripper = dripper;
   feedback.play("order");
 }
 
 function getOrderStage(order) {
   if (!order) return null;
-  if (order.overdue) return ORDER_STAGES[3];
-  const elapsed = order.max - order.time;
-  if (elapsed < order.stageDurations[0]) return ORDER_STAGES[0];
-  if (elapsed < order.stageDurations[0] + order.stageDurations[1]) return ORDER_STAGES[1];
-  return ORDER_STAGES[2];
+  return ORDER_STAGES.find(stage => stage.key === orderStageKey(order));
 }
 
 function beginFill() {
@@ -433,6 +429,7 @@ function serveSelected() {
   if (k.water + .001 < .9) return toast("水量不足 — 900ml必要", true);
   if (k.temp < 92) { breakChain(); feedback.play("error"); toast(`${Math.round(k.temp)}°C — まだぬるい！`, true); updateUI(); return; }
   const [order] = state.orders.splice(orderIndex, 1);
+  state.serviceCounts[orderStageKey(order)]++;
   state.served++;
   serviceCelebration(order, k.temp);
   feedback.waterTrail(k, pot);
@@ -449,7 +446,7 @@ function resetGame() {
   feedback.clear();
   feedback.unlockAudio();
   const difficulty = DIFFICULTIES[state.difficulty];
-  Object.assign(state, { running: true, activeKettles: difficulty.kettles, activeDrippers: difficulty.drippers, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, achievement: 100, flowStarted: false, flowTime: 0, blockedTime: 0, combo: 0, bestCombo: 0, served: 0, perfect: 0, recoveries: 0, flowEffect: 0, orderId: 1, orders: [], nextOrder: .6 });
+  Object.assign(state, { running: true, activeKettles: difficulty.kettles, activeDrippers: difficulty.drippers, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, achievement: null, serviceCounts: createServiceCounts(), combo: 0, bestCombo: 0, served: 0, perfect: 0, recoveries: 0, flowEffect: 0, orderId: 1, orders: [], nextOrder: .6 });
   kettleData.forEach(k => Object.assign(k, { water: 0, temp: 22, state: "empty", boilTime: 0, pourAnim: 0 }));
   potData.forEach((pot, i) => {
     Object.assign(pot, { water: 0, temp: 22, waterLevel: 0, flash: 0, returnAnim: 0, busyTime: 0, presentationTime: 0, assignedDripper: null });
@@ -472,16 +469,21 @@ function endGame() {
   state.running = false;
   feedback.clear();
   ui.flowHud.hidden = true;
-  const rank = state.achievement >= 95 ? "S" : state.achievement >= 85 ? "A" : state.achievement >= 70 ? "B" : "C";
-  $("#result-rank").textContent = `RANK ${rank}`;
+  const evaluation = evaluateService(state.serviceCounts, state.orders);
+  state.achievement = evaluation.percentage;
+  const rank = serviceRank(state.achievement);
+  $("#result-rank").textContent = rank ? `RANK ${rank}` : "未評価";
   ui.resultMode.textContent = `${DIFFICULTIES[state.difficulty].label} / ${TIME_SLOTS[state.timeSlot].label} ${TIME_SLOTS[state.timeSlot].range}`;
-  $("#result-copy").textContent = rank === "S" ? "完璧な先読み。お湯の流れを最後まで止めませんでした。" : rank === "A" ? "ナイスリベロ！ほぼ滞りなく提供できました。" : "時間超過を減らし、お湯を止めずに届けよう。";
-  $("#final-achievement").textContent = `${state.achievement}%`; $("#final-served").textContent = state.served; $("#final-combo").textContent = state.bestCombo;
+  $("#result-copy").textContent = !rank ? "評価対象の注文はまだありません。注文が届いたらお湯を提供しよう。" : rank === "S" ? "見事な先読み。ほぼすべての注文を定刻に提供できました。" : rank === "A" ? "ナイスリベロ！安定した給湯で店を支えました。" : "ON TIMEでの提供を増やし、待たせている注文を減らそう。";
+  $("#final-achievement").textContent = achievementLabel(state.achievement); $("#final-served").textContent = state.served; $("#final-combo").textContent = state.bestCombo;
+  $("#evaluation-summary").textContent = `評価対象 ${evaluation.evaluated}件：提供 ${evaluation.completed}件 / 未提供 ${evaluation.unserved}件（0%）・猶予中 ${evaluation.grace}件は評価保留`;
+  $("#evaluation-breakdown").textContent = `提供時の内訳 · ON TIME ${state.serviceCounts["on-time"]} / DELAYED ${state.serviceCounts.delayed} / CRITICAL ${state.serviceCounts.critical} / OVERDUE ${state.serviceCounts.overdue}`;
   $("#final-perfect").textContent = state.perfect;
   $("#final-recovery").textContent = state.recoveries;
   $("#final-volume").textContent = `${(state.served * .9).toFixed(1)} L`;
   $("#result").classList.add("show");
-  feedback.countResult($("#final-achievement"), state.achievement, "%");
+  if (state.achievement !== null) feedback.countResult($("#final-achievement"), achievementValue(state.achievement), "%", 1);
+  ui.achievement.textContent = achievementLabel(state.achievement);
   feedback.pulse($("#result-rank"));
   feedback.play("finish");
 }
@@ -513,7 +515,12 @@ function renderOrders() {
 
 function updateUI() {
   const k = kettleData[state.selected];
-  ui.achievement.textContent = `${state.achievement}%`; ui.achievement.parentElement.classList.toggle("warning", state.achievement < 80); ui.combo.textContent = `${state.combo}`;
+  const evaluation = evaluateService(state.serviceCounts, state.orders);
+  state.achievement = evaluation.percentage;
+  ui.achievement.textContent = achievementLabel(state.achievement);
+  ui.achievement.parentElement.classList.toggle("warning", state.achievement !== null && state.achievement < 80);
+  ui.achievement.parentElement.title = `提供時の状態：ON TIME 100% / DELAYED 70% / CRITICAL 30% / OVERDUE 0%。評価対象 ${evaluation.evaluated}件（未提供 ${evaluation.unserved}件は0%）。猶予中 ${evaluation.grace}件は保留。`;
+  ui.combo.textContent = `${state.combo}`;
   ui.flowHud.classList.toggle("in-flow", state.flowEffect > 0);
   const targetChain = state.combo < 3 ? 3 : state.combo < 5 ? 5 : (Math.floor(state.combo / 10) + 1) * 10;
   ui.flowLabel.textContent = state.flowEffect > 0 ? "FLOW STATE" : "BUILD YOUR FLOW";
@@ -588,12 +595,7 @@ function tick(now) {
     if (newlyOverdue) {
       breakChain();
       feedback.play("error");
-      toast("時間超過 — 達成度が低下中", true);
-    }
-    if (state.flowStarted) {
-      state.flowTime += rawDt;
-      if (state.orders.some(order => order.overdue)) state.blockedTime += rawDt;
-      state.achievement = Math.max(0, Math.round((1 - state.blockedTime / state.flowTime) * 100));
+      toast("時間超過 — この注文は0%評価", true);
     }
 
     if (state.filling && state.fillKettle !== null) {
