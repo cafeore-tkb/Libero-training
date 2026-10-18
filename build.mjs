@@ -7,7 +7,11 @@ await Promise.all([
   cp("style.css", "dist/style.css"),
   cp("game.js", "dist/game.js"),
   cp("feedback.js", "dist/feedback.js"),
-  cp("evaluation.js", "dist/evaluation.js")
+  cp("evaluation.js", "dist/evaluation.js"),
+  cp("config.js", "dist/config.js"),
+  cp("setup.js", "dist/setup.js"),
+  cp("boot.js", "dist/boot.js"),
+  cp("vendor", "dist/vendor", { recursive: true })
 ]);
 
 console.log("Built static site in dist/");

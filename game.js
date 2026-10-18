@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { createFeedback, serviceJudgment } from "./feedback.js";
 import { createServiceCounts, orderStageKey, evaluateService, achievementLabel, achievementValue, serviceRank } from "./evaluation.js";
+import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
+import { selection, updateSetupUI } from "./setup.js";
 
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -199,24 +201,12 @@ const ROOM_TEMP = 22;
 const FILL_RATE = .25;
 const HEAT_POWER = 13.8;
 const KETTLE_COOL_RATE = .25;
-const DIFFICULTIES = {
-  easy: { label: "EASY", kettles: 2, drippers: 3 },
-  normal: { label: "NORMAL", kettles: 3, drippers: 4 },
-  hard: { label: "HARD", kettles: 4, drippers: 5 },
-  "death-march": { label: "DEATH MARCH", kettles: 5, drippers: 6 }
-};
 const ORDER_STAGES = [
   { key: "on-time", label: "ON TIME" },
   { key: "delayed", label: "DELAYED" },
   { key: "critical", label: "CRITICAL" },
   { key: "overdue", label: "OVERDUE" }
 ];
-const TIME_SLOTS = {
-  morning: { label: "MORNING", range: "10:00—11:30", pace: "CALM", orderMin: 6, orderMax: 8, orderStages: [26, 18, 12], fog: 0x1c3027, key: 0xffedc8, rim: 0xb7ee68, exposure: 1.12 },
-  lunch: { label: "LUNCH", range: "11:30—13:00", pace: "RUSH", orderMin: 3, orderMax: 4.5, orderStages: [11, 8, 6], fog: 0x14251e, key: 0xffe4c1, rim: 0xff9b56, exposure: 1.08 },
-  afternoon: { label: "AFTERNOON", range: "13:00—15:00", pace: "STEADY", orderMin: 4.5, orderMax: 6, orderStages: [20, 14, 10], fog: 0x18251f, key: 0xffcf9c, rim: 0xb7ee68, exposure: 1.02 },
-  closing: { label: "CLOSING", range: "15:00—16:00", pace: "LAST CALL", orderMin: 4, orderMax: 6.5, orderStages: [15, 11, 8], fog: 0x111826, key: 0xb9c9ff, rim: 0x728ed2, exposure: .92 }
-};
 const KETTLE_LAYOUTS = {
   2: [[1.7, -.2], [3.5, -.2]],
   3: [[1.15, .5], [2.45, -.72], [3.75, .5]],
@@ -304,25 +294,6 @@ function applyConfiguration() {
   hemisphere.intensity = state.timeSlot === "closing" ? 1.65 : 2.2;
   renderer.toneMappingExposure = slot.exposure;
   document.body.dataset.timeSlot = state.timeSlot;
-}
-
-function updateSetupUI() {
-  const difficulty = DIFFICULTIES[state.difficulty];
-  const slot = TIME_SLOTS[state.timeSlot];
-  document.querySelectorAll("[data-difficulty]").forEach(button => {
-    const selected = button.dataset.difficulty === state.difficulty;
-    button.classList.toggle("selected", selected);
-    button.setAttribute("aria-pressed", String(selected));
-  });
-  document.querySelectorAll("[data-time-slot]").forEach(button => {
-    const selected = button.dataset.timeSlot === state.timeSlot;
-    button.classList.toggle("selected", selected);
-    button.setAttribute("aria-pressed", String(selected));
-  });
-  if (ui.setupLead) ui.setupLead.textContent = `${difficulty.kettles}台のケトルを回し、${difficulty.drippers}人のドリッパーから届く要求に応えよう。`;
-  const orderLimit = slot.orderStages.reduce((total, seconds) => total + seconds, 0);
-  ui.difficultySummary.textContent = `${difficulty.kettles} KETTLES / ${difficulty.drippers} DRIPPERS`;
-  ui.timeSummary.textContent = `${slot.pace} — 注文間隔 ${slot.orderMin}〜${slot.orderMax}秒 / LIMIT ${orderLimit}s ±10%`;
 }
 
 function selectKettle(index) {
@@ -734,23 +705,15 @@ $("#change-settings-button").onclick = () => {
   $("#intro").classList.add("show");
   updateSetupUI();
 };
-document.querySelectorAll("[data-difficulty]").forEach(button => {
-  button.onclick = () => {
-    state.difficulty = button.dataset.difficulty;
-    state.orders = [];
-    ui.orders.replaceChildren();
-    applyConfiguration();
-    updateSetupUI();
-    selectKettle(0);
-  };
-});
-document.querySelectorAll("[data-time-slot]").forEach(button => {
-  button.onclick = () => {
-    state.timeSlot = button.dataset.timeSlot;
-    applyConfiguration();
-    updateSetupUI();
-  };
-});
+function syncSetup() {
+  state.difficulty = selection.difficulty;
+  state.timeSlot = selection.timeSlot;
+  state.orders = [];
+  ui.orders.replaceChildren();
+  applyConfiguration();
+  selectKettle(0);
+}
+document.addEventListener("setup-change", syncSetup);
 $("#sound-toggle").onclick = (e) => {
   state.sound = !state.sound;
   feedback.setSound(state.sound);
@@ -769,4 +732,4 @@ $("#effects-toggle").onclick = e => {
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
 }
-addEventListener("resize", resize); resize(); applyConfiguration(); updateSetupUI(); selectKettle(0); updateUI(); requestAnimationFrame(tick);
+addEventListener("resize", resize); resize(); syncSetup(); updateSetupUI(); updateUI(); requestAnimationFrame(tick);

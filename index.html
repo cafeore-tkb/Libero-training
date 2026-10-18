@@ -106,7 +106,9 @@
             <div><b>04</b><span>次の空ポットへ<br />900ml注ぐ</span></div>
           </div>
           <p class="feel-tip"><b>FIND YOUR FLOW</b> 定刻・96°C以上で PERFECT。3連続提供から演出が育つ。</p>
-          <button id="start-button" class="start-button">シフト開始 <span>→</span></button>
+          <p id="boot-status" class="boot-status" role="status">3D画面を準備中… 設定は先に選択できます。</p>
+          <button id="start-button" class="start-button" disabled>シフト開始 <span>→</span></button>
+          <button id="reload-button" class="text-button" hidden>再読み込み</button>
           <small class="safety">達成度：ON TIME 100% / DELAYED 70% / CRITICAL 30% / OVERDUE 0% の平均。猶予切れの未提供も0%、猶予中は評価保留。</small>
         </div>
       </section>
@@ -131,8 +133,8 @@
       </section>
     </main>
     <script type="importmap">
-      {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
+      {"imports":{"three":"./vendor/three.module.js"}}
     </script>
-    <script type="module" src="./game.js"></script>
+    <script type="module" src="./boot.js"></script>
   </body>
 </html>
