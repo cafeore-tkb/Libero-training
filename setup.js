@@ -1,6 +1,6 @@
-import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
+import { DIFFICULTIES, PLAY_DURATIONS, TIME_SLOTS } from "./config.js";
 
-export const selection = { difficulty: "normal", timeSlot: "afternoon" };
+export const selection = { difficulty: "normal", timeSlot: "afternoon", playDuration: 120 };
 
 export function updateSetupUI() {
   const difficulty = DIFFICULTIES[selection.difficulty];
@@ -15,18 +15,28 @@ export function updateSetupUI() {
     button.classList.toggle("selected", selected);
     button.setAttribute("aria-pressed", String(selected));
   });
+  document.querySelectorAll("button[data-play-duration]").forEach(button => {
+    const selected = Number(button.dataset.playDuration) === selection.playDuration;
+    button.classList.toggle("selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
   const lead = document.querySelector("#setup-lead");
   if (lead) lead.textContent = `${difficulty.kettles}台のケトルを回し、${difficulty.drippers}人のドリッパーから届く要求に応えよう。`;
   document.querySelector("#difficulty-summary").textContent = `${difficulty.kettles} KETTLES / ${difficulty.drippers} DRIPPERS`;
   const limit = slot.orderStages.reduce((sum, seconds) => sum + seconds, 0);
   document.querySelector("#time-summary").textContent = `${slot.pace} — 注文間隔 ${slot.orderMin}〜${slot.orderMax}秒 / LIMIT ${limit}s ±10%`;
+  document.querySelector("#duration-summary").textContent = `SHIFT LENGTH / ${selection.playDuration} SECONDS`;
 }
 
-document.querySelectorAll("button[data-difficulty], button[data-time-slot]").forEach(button => {
+document.querySelectorAll("button[data-difficulty], button[data-time-slot], button[data-play-duration]").forEach(button => {
   button.addEventListener("click", () => {
     if (!document.querySelector("#intro").classList.contains("show")) return;
     if (button.dataset.difficulty) selection.difficulty = button.dataset.difficulty;
     if (button.dataset.timeSlot) selection.timeSlot = button.dataset.timeSlot;
+    if (button.dataset.playDuration) {
+      const duration = Number(button.dataset.playDuration);
+      if (PLAY_DURATIONS.includes(duration)) selection.playDuration = duration;
+    }
     updateSetupUI();
     document.dispatchEvent(new CustomEvent("setup-change", { detail: { ...selection } }));
   });

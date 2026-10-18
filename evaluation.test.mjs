@@ -2,14 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createServiceCounts, orderStageKey, evaluateService, achievementLabel, serviceRank } from "./evaluation.js";
 
-const order = elapsed => ({ max: 44, time: Math.max(0, 44 - elapsed), stageDurations: [20, 14, 10], overdue: elapsed >= 44 });
+const order = elapsed => ({ max: 66, time: Math.max(0, 66 - elapsed), stageDurations: [30, 21, 15], overdue: elapsed >= 66 });
 const evaluate = (counts, pending = []) => evaluateService({ ...createServiceCounts(), ...counts }, pending);
 
 test("the four stages change at their actual boundaries", () => {
-  for (const [elapsed, expected] of [[0,"on-time"],[19.99,"on-time"],[20,"delayed"],[33.99,"delayed"],[34,"critical"],[43.99,"critical"],[44,"overdue"],[60,"overdue"]]) {
+  for (const [elapsed, expected] of [[0,"on-time"],[29.99,"on-time"],[30,"delayed"],[50.99,"delayed"],[51,"critical"],[65.99,"critical"],[66,"overdue"],[80,"overdue"]]) {
     assert.equal(orderStageKey(order(elapsed)), expected);
   }
-  assert.equal(orderStageKey({ max: 25, time: 14, stageDurations: [11,8,6], overdue: false }), "delayed");
+  assert.equal(orderStageKey({ max: 38, time: 21, stageDurations: [17,12,9], overdue: false }), "delayed");
 });
 
 test("no delivery cannot produce a 100% achievement or S rank", () => {
@@ -17,8 +17,8 @@ test("no delivery cannot produce a 100% achievement or S rank", () => {
   assert.equal(evaluate({}, [order(2)]).percentage, null);
   assert.equal(serviceRank(null), null);
   assert.equal(achievementLabel(null), "未評価");
-  assert.equal(evaluate({}, [order(21)]).percentage, 0);
-  assert.equal(evaluate({}, [order(44)]).percentage, 0);
+  assert.equal(evaluate({}, [order(31)]).percentage, 0);
+  assert.equal(evaluate({}, [order(66)]).percentage, 0);
 });
 
 test("deliveries earn 100, 50, 10 or 0 percent according to stage", () => {
@@ -29,12 +29,12 @@ test("deliveries earn 100, 50, 10 or 0 percent according to stage", () => {
 });
 
 test("each unserved late request counts, rather than a single shared blocked timer", () => {
-  assert.equal(evaluate({ "on-time": 1 }, [order(44)]).percentage, 50);
-  assert.equal(evaluate({ "on-time": 1 }, [order(44),order(44),order(44)]).percentage, 25);
+  assert.equal(evaluate({ "on-time": 1 }, [order(66)]).percentage, 50);
+  assert.equal(evaluate({ "on-time": 1 }, [order(66),order(66),order(66)]).percentage, 25);
 });
 
 test("recovery replaces one pending entry; it neither double-counts nor forgives the delay", () => {
-  const before = evaluate({ "on-time": 1 }, [order(44)]);
+  const before = evaluate({ "on-time": 1 }, [order(66)]);
   const after = evaluate({ "on-time": 1, overdue: 1 });
   assert.equal(before.percentage, after.percentage);
   assert.equal(before.evaluated, after.evaluated);
@@ -42,7 +42,7 @@ test("recovery replaces one pending entry; it neither double-counts nor forgives
 });
 
 test("fresh end-of-shift requests remain ungraded while unserved late ones lower the final result", () => {
-  assert.deepEqual(evaluate({ "on-time": 1 }, [order(1),order(25)]), {
+  assert.deepEqual(evaluate({ "on-time": 1 }, [order(1),order(35)]), {
     percentage: 50, completed: 1, evaluated: 2, unserved: 1, grace: 1
   });
   assert.equal(evaluate({ "on-time": 1 }, [order(1)]).percentage, 100);
@@ -63,6 +63,6 @@ test("only a fully on-time run earns S; a single late or unserved request lowers
   assert.equal(serviceRank(evaluate({ "on-time": 9, delayed: 1 }).percentage), "A");
   assert.equal(serviceRank(evaluate({ "on-time": 9, critical: 1 }).percentage), "B");
   assert.equal(serviceRank(evaluate({ "on-time": 9, overdue: 1 }).percentage), "B");
-  assert.equal(serviceRank(evaluate({ "on-time": 9 }, [order(44)]).percentage), "B");
+  assert.equal(serviceRank(evaluate({ "on-time": 9 }, [order(66)]).percentage), "B");
   assert.equal(serviceRank(evaluate({ "on-time": 999, delayed: 1 }).percentage), "A");
 });

@@ -214,7 +214,7 @@ const KETTLE_LAYOUTS = {
   4: [[.75, .5], [1.85, -.72], [3.05, -.72], [4.15, .5]],
   5: [[.45, .55], [1.45, -.8], [2.45, .05], [3.45, -.8], [4.45, .55]]
 };
-const state = { running: false, difficulty: "normal", timeSlot: "afternoon", activeKettles: 3, activeDrippers: 4, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, achievement: null, serviceCounts: createServiceCounts(), combo: 0, bestCombo: 0, served: 0, perfect: 0, recoveries: 0, flowEffect: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true, effects: true };
+const state = { running: false, difficulty: "normal", timeSlot: "afternoon", playDuration: 120, activeKettles: 3, activeDrippers: 4, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 120, achievement: null, serviceCounts: createServiceCounts(), combo: 0, bestCombo: 0, served: 0, perfect: 0, recoveries: 0, flowEffect: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true, effects: true };
 const $ = (q) => document.querySelector(q);
 const ui = {
   achievement: $("#achievement"), combo: $("#combo"), timer: $("#timer"), orders: $("#orders"), count: $("#order-count"),
@@ -286,7 +286,7 @@ function applyConfiguration() {
   ui.orders.style.setProperty("--drippers", state.activeDrippers);
   ui.dripperLabel.textContent = `${state.activeDrippers} DRIPPERS`;
   ui.kettleShortcuts.textContent = state.activeKettles === 1 ? "1" : `1—${state.activeKettles}`;
-  ui.shiftStatus.innerHTML = `<span class="live-dot"></span>${difficulty.label} / ${slot.label} ${slot.range}`;
+  ui.shiftStatus.innerHTML = `<span class="live-dot"></span>${difficulty.label} / ${slot.label} / ${state.playDuration}s`;
   canvas.setAttribute("aria-label", `右側に配置された${state.activeKettles}台の電気ケトルと、左側に並ぶコーヒーポットキューの3D作業台`);
 
   scene.fog.color.setHex(slot.fog);
@@ -414,7 +414,7 @@ function resetGame() {
   feedback.clear();
   feedback.unlockAudio();
   const difficulty = DIFFICULTIES[state.difficulty];
-  Object.assign(state, { running: true, activeKettles: difficulty.kettles, activeDrippers: difficulty.drippers, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, achievement: null, serviceCounts: createServiceCounts(), combo: 0, bestCombo: 0, served: 0, perfect: 0, recoveries: 0, flowEffect: 0, orderId: 1, orders: [], nextOrder: .6 });
+  Object.assign(state, { running: true, activeKettles: difficulty.kettles, activeDrippers: difficulty.drippers, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: state.playDuration, achievement: null, serviceCounts: createServiceCounts(), combo: 0, bestCombo: 0, served: 0, perfect: 0, recoveries: 0, flowEffect: 0, orderId: 1, orders: [], nextOrder: .6 });
   kettleData.forEach(k => Object.assign(k, { water: 0, temp: 22, state: "empty", boilTime: 0, pourAnim: 0 }));
   potData.forEach((pot, i) => {
     Object.assign(pot, { water: 0, temp: 22, waterLevel: 0, flash: 0, returnAnim: 0, busyTime: 0, presentationTime: 0, assignedDripper: null });
@@ -425,9 +425,10 @@ function resetGame() {
   applyConfiguration();
   $("#intro").classList.remove("show"); $("#result").classList.remove("show");
   ui.flowHud.hidden = false;
-  ui.timer.classList.remove("warning"); ui.timer.querySelector("strong").textContent = "01:30";
+  const minutes = Math.floor(state.playDuration / 60), seconds = state.playDuration % 60;
+  ui.timer.classList.remove("warning"); ui.timer.querySelector("strong").textContent = `${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
   clearTimeout(toastTimer); ui.toast.className = "toast";
-  feedback.announce("LET’S FLOW", "90秒間、店の流れを守れ。", "#b7ee68");
+  feedback.announce("LET’S FLOW", `${state.playDuration}秒間、店の流れを守れ。`, "#b7ee68");
   feedback.play("start");
   selectKettle(0); updateUI();
 }
@@ -441,7 +442,7 @@ function endGame() {
   state.achievement = evaluation.percentage;
   const rank = serviceRank(state.achievement);
   $("#result-rank").textContent = rank ? `RANK ${rank}` : "未評価";
-  ui.resultMode.textContent = `${DIFFICULTIES[state.difficulty].label} / ${TIME_SLOTS[state.timeSlot].label} ${TIME_SLOTS[state.timeSlot].range}`;
+  ui.resultMode.textContent = `${DIFFICULTIES[state.difficulty].label} / ${TIME_SLOTS[state.timeSlot].label} / ${state.playDuration} SEC`;
   $("#result-copy").textContent = !rank ? "評価対象の注文はまだありません。注文が届いたらお湯を提供しよう。" : rank === "S" ? "完全達成。評価対象のすべての注文をON TIMEで提供しました。" : rank === "A" ? "高い安定感。あと少しで全件ON TIMEです。" : "ON TIMEでの提供を増やし、待たせている注文を減らそう。";
   $("#final-achievement").textContent = achievementLabel(state.achievement); $("#final-served").textContent = state.served; $("#final-combo").textContent = state.bestCombo;
   $("#evaluation-summary").textContent = `評価対象 ${evaluation.evaluated}件：提供 ${evaluation.completed}件 / 未提供 ${evaluation.unserved}件（0%）・猶予中 ${evaluation.grace}件は評価保留`;
@@ -704,6 +705,8 @@ $("#change-settings-button").onclick = () => {
 function syncSetup() {
   state.difficulty = selection.difficulty;
   state.timeSlot = selection.timeSlot;
+  state.playDuration = selection.playDuration;
+  state.time = state.playDuration;
   state.orders = [];
   ui.orders.replaceChildren();
   applyConfiguration();

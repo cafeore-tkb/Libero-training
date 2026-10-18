@@ -20,7 +20,7 @@
           <span class="brand-mark">L</span>
           <span><b>LIBERO</b><small>湯沸かし訓練</small></span>
         </a>
-        <div id="shift-status" class="shift-status"><span class="live-dot"></span>NORMAL / AFTERNOON</div>
+        <div id="shift-status" class="shift-status"><span class="live-dot"></span>NORMAL / AFTERNOON / 120s</div>
         <div class="feedback-toggles">
           <button id="effects-toggle" class="icon-button" aria-label="動きのある演出を切り替え" aria-pressed="true" title="動きのある演出 ON/OFF">FX</button>
           <button id="sound-toggle" class="icon-button" aria-label="効果音を切り替え" aria-pressed="true" title="効果音 ON/OFF">♪</button>
@@ -30,7 +30,7 @@
       <section class="scoreboard" aria-label="ゲーム状況">
         <div class="metric achievement" title="提供時の状態で評価。ON TIME 100% / DELAYED 50% / CRITICAL 10% / OVERDUE・猶予切れの未提供 0%。猶予中は評価保留。S:100% / A:95%以上 / B:85%以上。"><span>達成度</span><strong id="achievement">未評価</strong></div>
         <div class="metric combo"><span>CHAIN</span><strong id="combo">0</strong></div>
-        <div class="timer" id="timer"><span>SHIFT</span><strong>01:30</strong></div>
+        <div class="timer" id="timer"><span>SHIFT</span><strong>02:00</strong></div>
       </section>
 
       <section id="flow-hud" class="flow-hud" aria-label="連続提供の状況" hidden>
@@ -92,12 +92,21 @@
             <fieldset class="setup-group">
               <legend>TIME SLOT</legend>
               <div class="option-grid time-options" role="group" aria-label="時間帯">
-                <button type="button" class="setup-option" data-time-slot="morning" aria-pressed="false"><b>MORNING</b><small>10:00—11:30 / 56s</small></button>
-                <button type="button" class="setup-option" data-time-slot="lunch" aria-pressed="false"><b>LUNCH</b><small>11:30—13:00 / 25s</small></button>
-                <button type="button" class="setup-option selected" data-time-slot="afternoon" aria-pressed="true"><b>AFTERNOON</b><small>13:00—15:00 / 44s</small></button>
-                <button type="button" class="setup-option" data-time-slot="closing" aria-pressed="false"><b>CLOSING</b><small>15:00—16:00 / 34s</small></button>
+                <button type="button" class="setup-option" data-time-slot="morning" aria-pressed="false"><b>MORNING</b><small>10:00—11:30 / 84s</small></button>
+                <button type="button" class="setup-option" data-time-slot="lunch" aria-pressed="false"><b>LUNCH</b><small>11:30—13:00 / 38s</small></button>
+                <button type="button" class="setup-option selected" data-time-slot="afternoon" aria-pressed="true"><b>AFTERNOON</b><small>13:00—15:00 / 66s</small></button>
+                <button type="button" class="setup-option" data-time-slot="closing" aria-pressed="false"><b>CLOSING</b><small>15:00—16:00 / 52s</small></button>
               </div>
-              <small id="time-summary" class="setup-summary">STEADY — INTERVAL 4.5〜6秒 / LIMIT 44s ±10%</small>
+              <small id="time-summary" class="setup-summary">STEADY — INTERVAL 4.5〜6秒 / LIMIT 66s ±10%</small>
+            </fieldset>
+            <fieldset class="setup-group">
+              <legend>PLAY TIME</legend>
+              <div class="option-grid duration-options" role="group" aria-label="プレイ時間">
+                <button type="button" class="setup-option" data-play-duration="90" aria-pressed="false"><b>90 SEC</b><small>QUICK SHIFT</small></button>
+                <button type="button" class="setup-option selected" data-play-duration="120" aria-pressed="true"><b>120 SEC</b><small>STANDARD</small></button>
+                <button type="button" class="setup-option" data-play-duration="150" aria-pressed="false"><b>150 SEC</b><small>LONG SHIFT</small></button>
+              </div>
+              <small id="duration-summary" class="setup-summary">SHIFT LENGTH / 120 SECONDS</small>
             </fieldset>
           </div>
           <div class="rules">
