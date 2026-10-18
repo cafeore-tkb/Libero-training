@@ -93,8 +93,10 @@ button { color: inherit; }
 .pot-slot.head.returned { border-color: #79b9c5; color: #102126; background: #79b9c5; }
 .pot-slot.serve-next { border-color: var(--green); color: #162116; background: var(--green); }
 .pot-slot.returned:not(.head) { border-color: #79b9c577; color: #9ed9e4; }
+.pot-slot.returned.return-next { border-color: #79b9c5; color: #102126; background: #79b9c5; }
 .pot-slot.in-use { opacity: .3; }
 .target-line { margin: 8px 0 0; color: var(--orange); font: 500 10px "DM Mono"; text-align: right; }
+.return-hint { margin: 6px 0 0; color: #9ed9e4; font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
 
 .controls { position: fixed; z-index: 5; left: 50%; bottom: 35px; display: flex; gap: 8px; transform: translateX(-50%); }
 .action-button { min-width: 145px; height: 60px; display: flex; align-items: center; gap: 12px; padding: 0 17px; border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(14px); cursor: pointer; text-align: left; transition: transform .15s, filter .15s; }
@@ -121,6 +123,7 @@ button { color: inherit; }
 
 .modal { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 24px; overflow-y: auto; background: rgba(6, 12, 9, .8); backdrop-filter: blur(12px); opacity: 0; visibility: hidden; transition: .35s; }
 .modal.show { opacity: 1; visibility: visible; }
+.modal:not(.show) { pointer-events: none; }
 .modal-card { width: min(560px, 100%); padding: 43px 45px 38px; border: 1px solid #ffffff20; background: #14231deF; box-shadow: 0 25px 100px #0009; }
 .intro-card { width: min(720px, 100%); padding: 32px 38px 28px; }
 .intro-card h1 { margin: 12px 0 12px; font-size: clamp(31px, 5vw, 49px); }
