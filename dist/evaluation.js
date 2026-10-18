@@ -1,4 +1,4 @@
-export const SERVICE_WEIGHTS = Object.freeze({ "on-time": 1, delayed: .7, critical: .3, overdue: 0 });
+export const SERVICE_WEIGHTS = Object.freeze({ "on-time": 1, delayed: .5, critical: .1, overdue: 0 });
 
 export function createServiceCounts() {
   return { "on-time": 0, delayed: 0, critical: 0, overdue: 0 };
@@ -41,5 +41,5 @@ export function achievementLabel(percentage) {
 
 export function serviceRank(percentage) {
   if (percentage === null) return null;
-  return percentage >= 95 ? "S" : percentage >= 85 ? "A" : percentage >= 70 ? "B" : "C";
+  return percentage >= 100 ? "S" : percentage >= 95 ? "A" : percentage >= 85 ? "B" : "C";
 }

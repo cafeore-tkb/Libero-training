@@ -21,11 +21,11 @@ test("no delivery cannot produce a 100% achievement or S rank", () => {
   assert.equal(evaluate({}, [order(44)]).percentage, 0);
 });
 
-test("deliveries earn 100, 70, 30 or 0 percent according to stage", () => {
-  for (const [stage, expected] of [["on-time",100],["delayed",70],["critical",30],["overdue",0]]) {
+test("deliveries earn 100, 50, 10 or 0 percent according to stage", () => {
+  for (const [stage, expected] of [["on-time",100],["delayed",50],["critical",10],["overdue",0]]) {
     assert.equal(evaluate({ [stage]: 1 }).percentage, expected);
   }
-  assert.equal(evaluate({ "on-time": 1, delayed: 1, critical: 1, overdue: 1 }).percentage, 50);
+  assert.equal(evaluate({ "on-time": 1, delayed: 1, critical: 1, overdue: 1 }).percentage, 40);
 });
 
 test("each unserved late request counts, rather than a single shared blocked timer", () => {
@@ -38,7 +38,7 @@ test("recovery replaces one pending entry; it neither double-counts nor forgives
   const after = evaluate({ "on-time": 1, overdue: 1 });
   assert.equal(before.percentage, after.percentage);
   assert.equal(before.evaluated, after.evaluated);
-  assert.equal(evaluate({ "on-time": 1, delayed: 1 }).percentage, 85);
+  assert.equal(evaluate({ "on-time": 1, delayed: 1 }).percentage, 75);
 });
 
 test("fresh end-of-shift requests remain ungraded while unserved late ones lower the final result", () => {
@@ -49,10 +49,20 @@ test("fresh end-of-shift requests remain ungraded while unserved late ones lower
 });
 
 test("rank boundaries use unrounded values and the display never rounds up into the next rank", () => {
-  for (const [value, rank] of [[100,"S"],[95,"S"],[94.99,"A"],[85,"A"],[84.99,"B"],[70,"B"],[69.99,"C"],[0,"C"]]) {
+  for (const [value, rank] of [[100,"S"],[99.99,"A"],[95,"A"],[94.99,"B"],[85,"B"],[84.99,"C"],[70,"C"],[0,"C"]]) {
     assert.equal(serviceRank(value), rank);
   }
   assert.equal(achievementLabel(94.999), "94.9%");
   assert.equal(achievementLabel(100), "100%");
   assert.deepEqual(createServiceCounts(), { "on-time": 0, delayed: 0, critical: 0, overdue: 0 });
+});
+
+test("only a fully on-time run earns S; a single late or unserved request lowers the rank", () => {
+  assert.equal(serviceRank(evaluate({ "on-time": 10 }).percentage), "S");
+  assert.equal(evaluate({ "on-time": 9, delayed: 1 }).percentage, 95);
+  assert.equal(serviceRank(evaluate({ "on-time": 9, delayed: 1 }).percentage), "A");
+  assert.equal(serviceRank(evaluate({ "on-time": 9, critical: 1 }).percentage), "B");
+  assert.equal(serviceRank(evaluate({ "on-time": 9, overdue: 1 }).percentage), "B");
+  assert.equal(serviceRank(evaluate({ "on-time": 9 }, [order(44)]).percentage), "B");
+  assert.equal(serviceRank(evaluate({ "on-time": 999, delayed: 1 }).percentage), "A");
 });
