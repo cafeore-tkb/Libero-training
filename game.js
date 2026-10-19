@@ -3,7 +3,7 @@ import { createFeedback, serviceJudgment } from "./feedback.js";
 import { createServiceCounts, orderStageKey, evaluateService, achievementLabel, achievementValue, serviceRank } from "./evaluation.js";
 import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
 import { selection, updateSetupUI } from "./setup.js";
-import { planWaterReturn } from "./water-return.js";
+import { planWaterReturn, transferReturnedWater } from "./water-return.js";
 import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE } from "./timing.js";
 
 const canvas = document.querySelector("#scene");
@@ -370,17 +370,16 @@ function returnWaterToKettle() {
   const plan = planWaterReturn(state.potQueue, potData, kettleData.slice(0, state.activeKettles), state.selected);
   if (!plan.canReturn) return toast(plan.reason, true);
   const pot = plan.pot;
-  const transferred = pot.water;
-  const mixedVolume = k.water + transferred;
-  k.temp = ((k.water * k.temp) + (transferred * pot.temp)) / mixedVolume;
-  k.water = Math.round(mixedVolume * 1e6) / 1e6;
-  k.state = k.temp >= 92 ? "ready" : "filled"; k.boilTime = 0;
-  pot.water = 0; pot.temp = 22; pot.waterLevel = 0; pot.flash = 1; pot.returnAnim = 1;
-  state.potQueue.splice(plan.queueIndex, 1);
-  state.potQueue.push(pot.index);
+  const result = transferReturnedWater(k, pot, plan.transferAmount);
+  pot.flash = 1; pot.returnAnim = 1;
+  if (result.complete) {
+    state.potQueue.splice(plan.queueIndex, 1);
+    state.potQueue.push(pot.index);
+  }
   feedback.play("recycle");
   feedback.pulse(ui.returnWater);
-  toast(`QUEUE → KETTLE 0${k.index + 1} / ${Math.round(transferred * 1000)}ml回収`); updateUI();
+  const remainder = result.complete ? "" : ` / ポット残り${Math.round(result.remaining * 1000)}ml`;
+  toast(`QUEUE → KETTLE 0${k.index + 1} / ${Math.round(result.transferred * 1000)}ml回収${remainder}`); updateUI();
 }
 
 function serveSelected() {
