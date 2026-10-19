@@ -87,7 +87,7 @@
                 <button type="button" class="setup-option" data-difficulty="hard" aria-pressed="false"><b>HARD</b><small>4K / 5D</small></button>
                 <button type="button" class="setup-option danger" data-difficulty="death-march" aria-pressed="false"><b>DEATH MARCH</b><small>5K / 6D</small></button>
               </div>
-              <small id="difficulty-summary" class="setup-summary">3 KETTLES / 4 DRIPPERS</small>
+              <small id="difficulty-summary" class="setup-summary">3 KETTLES · 4 DRIPPERS</small>
             </fieldset>
             <fieldset class="setup-group">
               <legend>TIME SLOT</legend>
@@ -97,7 +97,7 @@
                 <button type="button" class="setup-option selected" data-time-slot="afternoon" aria-pressed="true"><b>AFTERNOON</b><small>13:00—15:00 / 66s</small></button>
                 <button type="button" class="setup-option" data-time-slot="closing" aria-pressed="false"><b>CLOSING</b><small>15:00—16:00 / 52s</small></button>
               </div>
-              <small id="time-summary" class="setup-summary">STEADY — INTERVAL 4.5〜6秒 / LIMIT 66s ±10%</small>
+              <small id="time-summary" class="setup-summary">STEADY · 4.5〜6s · LIMIT 66s</small>
             </fieldset>
             <fieldset class="setup-group">
               <legend>PLAY TIME</legend>
@@ -106,20 +106,22 @@
                 <button type="button" class="setup-option selected" data-play-duration="120" aria-pressed="true"><b>120 SEC</b><small>STANDARD</small></button>
                 <button type="button" class="setup-option" data-play-duration="150" aria-pressed="false"><b>150 SEC</b><small>LONG SHIFT</small></button>
               </div>
-              <small id="duration-summary" class="setup-summary">SHIFT LENGTH / 120 SECONDS</small>
+              <small id="duration-summary" class="setup-summary">SHIFT · 120 SEC</small>
+            </fieldset>
+            <fieldset class="setup-group description-group">
+              <legend>DESCRIPTION</legend>
+              <div class="description-steps">
+                <span><b>01</b>長押し給水</span>
+                <span><b>02</b>加熱を監視</span>
+                <span><b>03</b>戻り湯回収</span>
+                <span><b>04</b>900ml提供</span>
+              </div>
+              <p><b>PERFECT</b> 定刻・96°C以上。達成度は ON TIME 100 / DELAYED 50 / CRITICAL 10 / OVERDUE 0。</p>
             </fieldset>
           </div>
-          <div class="rules">
-            <div><b>01</b><span>ボタンを長押し<br />必要量を給水</span></div>
-            <div><b>02</b><span>スイッチON<br />沸騰を監視</span></div>
-            <div><b>03</b><span>返却順に<br />戻り湯を回収</span></div>
-            <div><b>04</b><span>次の空ポットへ<br />900ml注ぐ</span></div>
-          </div>
-          <p class="feel-tip"><b>FIND YOUR FLOW</b> 定刻・96°C以上で PERFECT。3連続提供から演出が育つ。</p>
           <p id="boot-status" class="boot-status" role="status">3D画面を準備中… 設定は先に選択できます。</p>
           <button id="start-button" class="start-button" disabled>シフト開始 <span>→</span></button>
           <button id="reload-button" class="text-button" hidden>再読み込み</button>
-          <small class="safety">達成度：ON TIME 100% / DELAYED 50% / CRITICAL 10% / OVERDUE 0% の平均。猶予切れの未提供も0%、猶予中は評価保留。S:100% / A:95%以上 / B:85%以上。</small>
         </div>
       </section>
 

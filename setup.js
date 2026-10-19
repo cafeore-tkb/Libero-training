@@ -22,10 +22,10 @@ export function updateSetupUI() {
   });
   const lead = document.querySelector("#setup-lead");
   if (lead) lead.textContent = `${difficulty.kettles}台のケトルを回し、${difficulty.drippers}人のドリッパーから届く要求に応えよう。`;
-  document.querySelector("#difficulty-summary").textContent = `${difficulty.kettles} KETTLES / ${difficulty.drippers} DRIPPERS`;
+  document.querySelector("#difficulty-summary").textContent = `${difficulty.kettles} KETTLES · ${difficulty.drippers} DRIPPERS`;
   const limit = slot.orderStages.reduce((sum, seconds) => sum + seconds, 0);
-  document.querySelector("#time-summary").textContent = `${slot.pace} — 注文間隔 ${slot.orderMin}〜${slot.orderMax}秒 / LIMIT ${limit}s ±10%`;
-  document.querySelector("#duration-summary").textContent = `SHIFT LENGTH / ${selection.playDuration} SECONDS`;
+  document.querySelector("#time-summary").textContent = `${slot.pace} · ${slot.orderMin}〜${slot.orderMax}s · LIMIT ${limit}s`;
+  document.querySelector("#duration-summary").textContent = `SHIFT · ${selection.playDuration} SEC`;
 }
 
 document.querySelectorAll("button[data-difficulty], button[data-time-slot], button[data-play-duration]").forEach(button => {
