@@ -76,10 +76,15 @@
 
       <section id="intro" class="modal show" aria-modal="true" role="dialog">
         <div class="modal-card intro-card">
-          <p class="eyebrow">SOHOSAI / LIBERO TRAINING</p>
-          <h1>湯を切らすな。<br /><em>店の流れ</em>を守れ。</h1>
+          <div class="intro-heading">
+            <div>
+              <p class="eyebrow"><i></i>SOHOSAI / LIBERO TRAINING</p>
+              <h1>湯を切らすな。<br /><em>店の流れ</em>を守れ。</h1>
+            </div>
+            <div class="shift-stamp" aria-hidden="true"><small>TRAINING DECK</small><b>READY</b><span>04 MODULES</span></div>
+          </div>
           <div class="setup-grid">
-            <fieldset class="setup-group">
+            <fieldset class="setup-group" data-panel="01">
               <legend>DIFFICULTY</legend>
               <div class="option-grid difficulty-options" role="group" aria-label="難易度">
                 <button type="button" class="setup-option" data-difficulty="easy" aria-pressed="false"><b>EASY</b><small>2K / 3D</small></button>
@@ -89,7 +94,7 @@
               </div>
               <small id="difficulty-summary" class="setup-summary">3 KETTLES · 4 DRIPPERS</small>
             </fieldset>
-            <fieldset class="setup-group">
+            <fieldset class="setup-group" data-panel="02">
               <legend>TIME SLOT</legend>
               <div class="option-grid time-options" role="group" aria-label="時間帯">
                 <button type="button" class="setup-option" data-time-slot="morning" aria-pressed="false"><b>MORNING</b><small>10:00—11:30 / 84s</small></button>
@@ -99,7 +104,7 @@
               </div>
               <small id="time-summary" class="setup-summary">STEADY · 4.5〜6s · LIMIT 66s</small>
             </fieldset>
-            <fieldset class="setup-group">
+            <fieldset class="setup-group" data-panel="03">
               <legend>PLAY TIME</legend>
               <div class="option-grid duration-options" role="group" aria-label="プレイ時間">
                 <button type="button" class="setup-option" data-play-duration="90" aria-pressed="false"><b>90 SEC</b><small>QUICK SHIFT</small></button>
@@ -108,7 +113,7 @@
               </div>
               <small id="duration-summary" class="setup-summary">SHIFT · 120 SEC</small>
             </fieldset>
-            <fieldset class="setup-group description-group">
+            <fieldset class="setup-group description-group" data-panel="04">
               <legend>DESCRIPTION</legend>
               <div class="description-steps">
                 <span><b>01</b>長押し給水</span>
@@ -120,7 +125,7 @@
             </fieldset>
           </div>
           <p id="boot-status" class="boot-status" role="status">3D画面を準備中… 設定は先に選択できます。</p>
-          <button id="start-button" class="start-button" disabled>シフト開始 <span>→</span></button>
+          <button id="start-button" class="start-button shift-start" disabled><span class="start-label"><small>ALL SYSTEMS READY</small>シフト開始</span><i>→</i></button>
           <button id="reload-button" class="text-button" hidden>再読み込み</button>
         </div>
       </section>
