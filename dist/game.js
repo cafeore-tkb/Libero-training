@@ -4,6 +4,7 @@ import { createServiceCounts, orderStageKey, evaluateService, achievementLabel, 
 import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
 import { selection, updateSetupUI } from "./setup.js";
 import { planWaterReturn } from "./water-return.js";
+import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE } from "./timing.js";
 
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -199,8 +200,6 @@ for (let i = 0; i < 5; i++) {
 scene.add(sign);
 
 const ROOM_TEMP = 22;
-const FILL_RATE = .25;
-const HEAT_POWER = 13.8;
 const KETTLE_COOL_RATE = .25;
 const ORDER_STAGES = [
   { key: "on-time", label: "ON TIME" },
@@ -405,7 +404,7 @@ function serveSelected() {
   k.temp = Math.max(22, k.temp - 8);
   k.state = k.water > 0 ? (k.temp >= 92 ? "ready" : "filled") : "empty";
   k.boilTime = 0; k.pourAnim = 1;
-  pot.water = .9; pot.temp = k.temp + 8; pot.waterLevel = 1; pot.flash = 1; pot.busyTime = 7; pot.presentationTime = .7; pot.assignedDripper = order.dripper;
+  pot.water = .9; pot.temp = k.temp + 8; pot.waterLevel = 1; pot.flash = 1; pot.busyTime = POT_BUSY_TIME; pot.presentationTime = POT_PRESENTATION_TIME; pot.assignedDripper = order.dripper;
   state.potQueue.splice(emptyQueueIndex, 1);
   updateUI();
 }
@@ -610,7 +609,7 @@ function tick(now) {
         p.material.opacity = active ? Math.max(0, .25 - i * .025) * (0.65 + Math.sin(now * .003 + i) * .35) : 0;
         p.position.y = 1.55 + i * .14 + Math.sin(now * .0018 + i) * .05;
       });
-      if (k.pourAnim > 0) k.pourAnim = Math.max(0, k.pourAnim - rawDt * 1.5);
+      if (k.pourAnim > 0) k.pourAnim = Math.max(0, k.pourAnim - rawDt * POUR_ANIMATION_RATE);
       k.group.rotation.x = -Math.sin(k.pourAnim * Math.PI) * .32;
     });
     const firstEmptyPotIndex = state.potQueue.find(index => potData[index].water <= 0);
@@ -629,7 +628,7 @@ function tick(now) {
       } else if (!wasBusy && pot.water > 0) {
         pot.temp = Math.max(22, pot.temp - .18 * rawDt);
       }
-      pot.waterLevel = pot.busyTime > 0 ? .55 + (pot.busyTime / 7) * .45 : pot.water / .9;
+      pot.waterLevel = pot.busyTime > 0 ? .55 + (pot.busyTime / POT_BUSY_TIME) * .45 : pot.water / .9;
       pot.liquid.visible = pot.waterLevel > .01;
       pot.liquid.scale.y = Math.max(.02, pot.waterLevel);
       pot.liquid.position.y = .12 + .32 * pot.waterLevel;
@@ -644,7 +643,7 @@ function tick(now) {
       const isServeNext = pot.index === firstEmptyPotIndex;
       pot.requestRing.material.opacity = isReturnHead || isServeNext ? .95 : .12;
       pot.requestRing.material.color.setHex(isReturnHead ? 0x79b9c5 : isServeNext ? 0xa7d46f : 0xff9b56);
-      if (pot.returnAnim > 0) pot.returnAnim = Math.max(0, pot.returnAnim - rawDt * 1.6);
+      if (pot.returnAnim > 0) pot.returnAnim = Math.max(0, pot.returnAnim - rawDt * RETURN_ANIMATION_RATE);
       pot.group.rotation.z = Math.sin(pot.returnAnim * Math.PI) * .45;
     });
     const mins = Math.floor(state.time / 60), secs = Math.floor(state.time % 60);
