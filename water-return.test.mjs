@@ -24,6 +24,15 @@ test("returned pots are recovered in queue order and busy pots are never used", 
   assert.equal(planWaterReturn([3,0,1], pots, [kettle()], 0).pot.index, 1);
 });
 
+test("water being accumulated for an order is not mistaken for returned water", () => {
+  const servingPots = [
+    { index: 0, water: .35, busyTime: 0, assignedDripper: 2 },
+    { index: 1, water: .45, busyTime: 0, assignedDripper: null }
+  ];
+  const result = planWaterReturn([0,1], servingPots, [kettle()], 0);
+  assert.equal(result.pot.index, 1);
+});
+
 test("heating and completely full kettles are blocked with a usable alternative", () => {
   const heating = planWaterReturn([0,1], pots, [kettle(.3,"heating"),kettle(.3,"filled")], 0);
   assert.equal(heating.canReturn, false);

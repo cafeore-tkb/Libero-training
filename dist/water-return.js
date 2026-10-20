@@ -3,7 +3,7 @@ const EPSILON = 1e-9;
 const roundLiters = value => Math.round(value * 1e6) / 1e6;
 
 export function planWaterReturn(queue, pots, kettles, selected) {
-  const queueIndex = queue.findIndex(index => pots[index].water > 0 && !(pots[index].busyTime > 0));
+  const queueIndex = queue.findIndex(index => pots[index].water > 0 && pots[index].assignedDripper == null && !(pots[index].busyTime > 0));
   if (queueIndex < 0) return { queueIndex: -1, pot: null, canReturn: false, candidates: [], transferAmount: 0, remaining: 0, reason: queue.length ? "戻り湯の返却待ちです" : "すべてのポットが使用中です" };
   const pot = pots[queue[queueIndex]];
   const candidates = kettles.flatMap((kettle, index) => kettle.state !== "heating" && CAPACITY - kettle.water > EPSILON ? [index] : []);

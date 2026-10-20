@@ -5,6 +5,7 @@ import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
 import { selection, updateSetupUI } from "./setup.js";
 import { planWaterReturn, transferReturnedWater } from "./water-return.js";
 import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE } from "./timing.js";
+import { SERVING_TARGET, findServingQueueIndex, pourAvailableWater } from "./serving.js";
 
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -386,25 +387,30 @@ function serveSelected() {
   if (!state.running) return;
   endFill();
   const k = kettleData[state.selected];
-  const emptyQueueIndex = state.potQueue.findIndex(index => potData[index].water <= 0);
-  if (emptyQueueIndex < 0) return toast("空のポットがありません", true);
-  const potIndex = state.potQueue[emptyQueueIndex];
+  const servingQueueIndex = findServingQueueIndex(state.potQueue, potData, state.selectedDripper);
+  if (servingQueueIndex < 0) return toast("注湯できるポットがありません", true);
+  const potIndex = state.potQueue[servingQueueIndex];
   const pot = potData[potIndex];
   const orderIndex = state.orders.findIndex(order => order.dripper === state.selectedDripper);
   if (orderIndex < 0) return toast(`DRIPPER 0${state.selectedDripper + 1} は待機中です`, true);
-  if (k.water + .001 < .9) return toast("水量不足 — 900ml必要", true);
+  if (k.water <= 0) return toast("ケトルが空です", true);
   if (k.temp < 92) { breakChain(); feedback.play("error"); toast(`${Math.round(k.temp)}°C — まだぬるい！`, true); updateUI(); return; }
+  feedback.waterTrail(k, pot);
+  const pour = pourAvailableWater(k, pot, state.selectedDripper);
+  k.pourAnim = 1; pot.flash = 1;
+  if (!pour.complete) {
+    feedback.play("recycle");
+    feedback.pulse(ui.serve);
+    toast(`${Math.round(pour.transferred * 1000)}ml注湯 / ポット ${Math.round(pot.water * 1000)} / 900ml`);
+    updateUI();
+    return;
+  }
   const [order] = state.orders.splice(orderIndex, 1);
   state.serviceCounts[orderStageKey(order)]++;
   state.served++;
-  serviceCelebration(order, k.temp);
-  feedback.waterTrail(k, pot);
-  k.water = Math.max(0, Math.round((k.water - .9) * 100) / 100);
-  k.temp = Math.max(22, k.temp - 8);
-  k.state = k.water > 0 ? (k.temp >= 92 ? "ready" : "filled") : "empty";
-  k.boilTime = 0; k.pourAnim = 1;
-  pot.water = .9; pot.temp = k.temp + 8; pot.waterLevel = 1; pot.flash = 1; pot.busyTime = POT_BUSY_TIME; pot.presentationTime = POT_PRESENTATION_TIME; pot.assignedDripper = order.dripper;
-  state.potQueue.splice(emptyQueueIndex, 1);
+  serviceCelebration(order, pot.temp);
+  pot.busyTime = POT_BUSY_TIME; pot.presentationTime = POT_PRESENTATION_TIME;
+  state.potQueue.splice(servingQueueIndex, 1);
   updateUI();
 }
 
@@ -500,25 +506,28 @@ function updateUI() {
   ui.state.textContent = labels[k.state];
   [...ui.tabs.children].forEach((tab, i) => { tab.classList.toggle("active", i === state.selected); tab.classList.toggle("hot", kettleData[i].temp >= 92); });
   const selectedOrder = state.orders.some(order => order.dripper === state.selectedDripper);
-  const nextEmptyQueueIndex = state.potQueue.findIndex(index => potData[index].water <= 0);
+  const servingQueueIndex = findServingQueueIndex(state.potQueue, potData, state.selectedDripper);
   const returnPlan = planWaterReturn(state.potQueue, potData, kettleData.slice(0, state.activeKettles), state.selected);
   [...ui.potQueue.children].forEach((slot, queueIndex) => {
     const potIndex = state.potQueue[queueIndex];
     const pot = potIndex === undefined ? null : potData[potIndex];
     slot.className = "pot-slot";
     if (queueIndex === 0 && pot) slot.classList.add("head");
-    if (queueIndex === nextEmptyQueueIndex && pot) slot.classList.add("serve-next");
+    if (queueIndex === servingQueueIndex && pot) slot.classList.add("serve-next");
     if (queueIndex === returnPlan.queueIndex && pot) slot.classList.add("return-next");
     if (!pot) { slot.classList.add("in-use"); slot.textContent = "使用中"; }
+    else if (pot.water > 0 && pot.assignedDripper !== null) { slot.classList.add("partial"); slot.textContent = `D${String(pot.assignedDripper + 1).padStart(2,"0")} ${Math.round(pot.water * 1000)}`; }
     else if (pot.water > 0) { slot.classList.add("returned"); slot.textContent = `戻り ${Math.round(pot.water * 1000)}`; }
     else { slot.classList.add("empty"); slot.textContent = "空"; }
   });
-  const nextEmptyPot = nextEmptyQueueIndex < 0 ? null : potData[state.potQueue[nextEmptyQueueIndex]];
+  const servingPot = servingQueueIndex < 0 ? null : potData[state.potQueue[servingQueueIndex]];
   const emptyCount = state.potQueue.filter(index => potData[index].water <= 0).length;
   ui.availablePots.textContent = `${emptyCount} READY`;
   ui.target.textContent = !state.potQueue.length
     ? "QUEUE EMPTY — 全ポット使用中"
-    : nextEmptyPot ? `SERVE: 空ポット → D${String(state.selectedDripper + 1).padStart(2,"0")} / 900ml` : "空ポットなし — 戻り湯を回収してください";
+    : servingPot?.assignedDripper === state.selectedDripper
+      ? `SERVE: D${String(state.selectedDripper + 1).padStart(2,"0")} / ${Math.round(servingPot.water * 1000)} → 900ml`
+      : servingPot ? `SERVE: 空ポット → D${String(state.selectedDripper + 1).padStart(2,"0")} / 900ml` : "注湯できるポットなし — 戻り湯を回収してください";
   ui.returnHint.textContent = `RETURN: ${returnPlan.reason}`;
   ui.returnWater.title = returnPlan.reason;
   ui.fill.disabled = k.state === "heating" || k.water >= 1.199;
@@ -526,7 +535,7 @@ function updateUI() {
   ui.fill.classList.toggle("holding", state.filling && state.fillKettle === state.selected);
   ui.heat.disabled = k.water <= 0;
   ui.returnWater.disabled = !state.running || !returnPlan.canReturn;
-  ui.serve.disabled = !nextEmptyPot || k.water < .9 || k.temp < 92 || !selectedOrder;
+  ui.serve.disabled = !servingPot || k.water <= 0 || k.temp < 92 || !selectedOrder;
   ui.serve.classList.toggle("ready-to-pour", !ui.serve.disabled);
   renderOrders();
 }
@@ -611,8 +620,9 @@ function tick(now) {
       if (k.pourAnim > 0) k.pourAnim = Math.max(0, k.pourAnim - rawDt * POUR_ANIMATION_RATE);
       k.group.rotation.x = -Math.sin(k.pourAnim * Math.PI) * .32;
     });
-    const firstEmptyPotIndex = state.potQueue.find(index => potData[index].water <= 0);
-    const firstReturnedPotIndex = state.potQueue.find(index => potData[index].water > 0 && !(potData[index].busyTime > 0));
+    const firstServingQueueIndex = findServingQueueIndex(state.potQueue, potData, state.selectedDripper);
+    const firstServingPotIndex = firstServingQueueIndex < 0 ? undefined : state.potQueue[firstServingQueueIndex];
+    const firstReturnedPotIndex = state.potQueue.find(index => potData[index].water > 0 && potData[index].assignedDripper == null && !(potData[index].busyTime > 0));
     potData.forEach(pot => {
       pot.flash = Math.max(0, pot.flash - rawDt * .8);
       pot.presentationTime = Math.max(0, (pot.presentationTime || 0) - rawDt);
@@ -639,7 +649,7 @@ function tick(now) {
         pot.group.position.z += (targetZ - pot.group.position.z) * Math.min(1, rawDt * 7);
       }
       const isReturnHead = pot.index === firstReturnedPotIndex;
-      const isServeNext = pot.index === firstEmptyPotIndex;
+      const isServeNext = pot.index === firstServingPotIndex;
       pot.requestRing.material.opacity = isReturnHead || isServeNext ? .95 : .12;
       pot.requestRing.material.color.setHex(isReturnHead ? 0x79b9c5 : isServeNext ? 0xa7d46f : 0xff9b56);
       if (pot.returnAnim > 0) pot.returnAnim = Math.max(0, pot.returnAnim - rawDt * RETURN_ANIMATION_RATE);

@@ -92,6 +92,8 @@ button { color: inherit; }
 .pot-slot.head { border-color: var(--orange); color: #1b1712; background: var(--orange); }
 .pot-slot.head.returned { border-color: #79b9c5; color: #102126; background: #79b9c5; }
 .pot-slot.serve-next { border-color: var(--green); color: #162116; background: var(--green); }
+.pot-slot.partial { border-color: #b7ee6877; color: var(--green); background: rgba(183, 238, 104, .08); }
+.pot-slot.partial.serve-next { border-color: var(--green); color: #162116; background: var(--green); }
 .pot-slot.returned:not(.head) { border-color: #79b9c577; color: #9ed9e4; }
 .pot-slot.returned.return-next { border-color: #79b9c5; color: #102126; background: #79b9c5; }
 .pot-slot.in-use { opacity: .3; }
