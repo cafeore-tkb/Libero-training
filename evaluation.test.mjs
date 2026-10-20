@@ -48,8 +48,8 @@ test("fresh end-of-shift requests remain ungraded while unserved late ones lower
   assert.equal(evaluate({ "on-time": 1 }, [order(1)]).percentage, 100);
 });
 
-test("rank boundaries use unrounded values and the display never rounds up into the next rank", () => {
-  for (const [value, rank] of [[100,"S"],[99.99,"A"],[95,"A"],[94.99,"B"],[85,"B"],[84.99,"C"],[70,"C"],[0,"C"]]) {
+test("rank boundaries cover the full achievement range without collapsing failures into C", () => {
+  for (const [value, rank] of [[100,"S"],[99.99,"A"],[95,"A"],[94.99,"B"],[85,"B"],[84.99,"C"],[70,"C"],[69.99,"D"],[50,"D"],[49.99,"F"],[0,"F"]]) {
     assert.equal(serviceRank(value), rank);
   }
   assert.equal(achievementLabel(94.999), "94.9%");

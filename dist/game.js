@@ -502,7 +502,15 @@ function endGame() {
   const rank = serviceRank(state.achievement);
   $("#result-rank").textContent = rank ? `RANK ${rank}` : "未評価";
   ui.resultMode.textContent = `${DIFFICULTIES[state.difficulty].label} / ${TIME_SLOTS[state.timeSlot].label} / ${state.playDuration} SEC`;
-  $("#result-copy").textContent = !rank ? "評価対象の注文はまだありません。注文が届いたらお湯を提供しよう。" : rank === "S" ? "完全達成。評価対象のすべての注文をON TIMEで提供しました。" : rank === "A" ? "高い安定感。あと少しで全件ON TIMEです。" : "ON TIMEでの提供を増やし、待たせている注文を減らそう。";
+  const rankMessages = {
+    S: "完全達成。評価対象のすべての注文をON TIMEで提供しました。",
+    A: "高い安定感。あと少しで全件ON TIMEです。",
+    B: "店の流れは守れています。遅れ始めた注文を早めに拾おう。",
+    C: "提供は続いていますが、待ち時間が長めです。先読みして湯を準備しよう。",
+    D: "滞留が目立ちます。給水・加熱・提供の順番を組み直そう。",
+    F: "供給が追いついていません。まず1台を切らさず回すことから始めよう。"
+  };
+  $("#result-copy").textContent = rank ? rankMessages[rank] : "評価対象の注文はまだありません。注文が届いたらお湯を提供しよう。";
   $("#final-achievement").textContent = achievementLabel(state.achievement); $("#final-served").textContent = state.served; $("#final-combo").textContent = state.bestCombo;
   $("#evaluation-summary").textContent = `評価対象 ${evaluation.evaluated}件：提供 ${evaluation.completed}件 / 未提供 ${evaluation.unserved}件（0%）・猶予中 ${evaluation.grace}件は評価保留`;
   $("#evaluation-breakdown").textContent = `提供時の内訳 · ON TIME ${state.serviceCounts["on-time"]} / DELAYED ${state.serviceCounts.delayed} / CRITICAL ${state.serviceCounts.critical} / OVERDUE ${state.serviceCounts.overdue}`;
@@ -547,7 +555,7 @@ function updateUI() {
   state.achievement = evaluation.percentage;
   ui.achievement.textContent = achievementLabel(state.achievement);
   ui.achievement.parentElement.classList.toggle("warning", state.achievement !== null && state.achievement < 85);
-  ui.achievement.parentElement.title = `提供時の状態：ON TIME 100% / DELAYED 50% / CRITICAL 10% / OVERDUE 0%。評価対象 ${evaluation.evaluated}件（未提供 ${evaluation.unserved}件は0%）。猶予中 ${evaluation.grace}件は保留。S:100% / A:95%以上 / B:85%以上。`;
+  ui.achievement.parentElement.title = `提供時の状態：ON TIME 100% / DELAYED 50% / CRITICAL 10% / OVERDUE 0%。評価対象 ${evaluation.evaluated}件（未提供 ${evaluation.unserved}件は0%）。猶予中 ${evaluation.grace}件は保留。S:100% / A:95%以上 / B:85%以上 / C:70%以上 / D:50%以上 / F:50%未満。`;
   ui.combo.textContent = `${state.combo}`;
   ui.flowHud.classList.toggle("in-flow", state.flowEffect > 0);
   const targetChain = state.combo < 3 ? 3 : state.combo < 5 ? 5 : (Math.floor(state.combo / 10) + 1) * 10;
