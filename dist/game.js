@@ -53,7 +53,9 @@ for (let i = -4; i <= 4; i += 2) {
 }
 scene.add(counter);
 
-const kettleColors = [0xe75c42, 0xe3b440, 0x5ca88d, 0x728ed2, 0xa779c6];
+// 「わく子」のマットホワイトを軸に、識別性だけを残した淡いカラーバリエーション。
+const kettleColors = [0xf4efe5, 0xeadfd8, 0xdce8df, 0xdde5ed, 0xe7dfea];
+const kettleAccentColors = [0xd77255, 0xc9a34d, 0x669b7d, 0x7188a7, 0x9875a0];
 const kettleData = [];
 const clickable = [];
 
@@ -63,35 +65,80 @@ function makeKettle(index, x, z) {
   group.scale.setScalar(.72);
   group.userData.index = index;
 
-  const bodyMat = new THREE.MeshStandardMaterial({ color: kettleColors[index], roughness: .38, metalness: .12 });
-  const darkMat = new THREE.MeshStandardMaterial({ color: 0x151c19, roughness: .52 });
-  const metalMat = new THREE.MeshStandardMaterial({ color: 0xd1d7d2, roughness: .26, metalness: .72 });
+  const bodyMat = new THREE.MeshStandardMaterial({ color: kettleColors[index], roughness: .62, metalness: .03 });
+  const bodyHighlightMat = new THREE.MeshStandardMaterial({ color: 0xfffdf7, roughness: .5, metalness: .02 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x2f3432, roughness: .58 });
+  const baseMat = new THREE.MeshStandardMaterial({ color: 0xd7d4cc, roughness: .66 });
+  const accentMat = new THREE.MeshStandardMaterial({ color: kettleAccentColors[index], roughness: .5 });
+  const gaugeMat = new THREE.MeshStandardMaterial({ color: 0x364441, roughness: .28, transparent: true, opacity: .9 });
+  const gaugeWaterMat = new THREE.MeshStandardMaterial({ color: 0x8fc1ca, emissive: 0x17363b, emissiveIntensity: .35, roughness: .2 });
   const bodyProfile = [
-    new THREE.Vector2(.42, 0), new THREE.Vector2(.57, .12), new THREE.Vector2(.61, .66),
-    new THREE.Vector2(.57, 1.02), new THREE.Vector2(.45, 1.23), new THREE.Vector2(.18, 1.3), new THREE.Vector2(0, 1.3)
+    new THREE.Vector2(.43, 0), new THREE.Vector2(.54, .025), new THREE.Vector2(.59, .1),
+    new THREE.Vector2(.605, .32), new THREE.Vector2(.605, .78), new THREE.Vector2(.585, 1.02),
+    new THREE.Vector2(.54, 1.17), new THREE.Vector2(.45, 1.25), new THREE.Vector2(.16, 1.28),
+    new THREE.Vector2(0, 1.28)
   ];
-  const body = new THREE.Mesh(new THREE.LatheGeometry(bodyProfile, 28), bodyMat);
-  body.position.y = .12; body.castShadow = true; group.add(body); clickable.push(body);
+  const body = new THREE.Mesh(new THREE.LatheGeometry(bodyProfile, 36), bodyMat);
+  body.position.y = .1; body.castShadow = true; body.receiveShadow = true; group.add(body); clickable.push(body);
   body.userData.index = index;
-  const lid = new THREE.Mesh(new THREE.CylinderGeometry(.36, .43, .1, 24), darkMat);
-  lid.position.y = 1.43; lid.castShadow = true; group.add(lid);
-  const lidKnob = new THREE.Mesh(new THREE.SphereGeometry(.105, 14, 8), darkMat);
-  lidKnob.scale.y = .55; lidKnob.position.y = 1.53; group.add(lidKnob);
-  const baseRing = new THREE.Mesh(new THREE.CylinderGeometry(.67, .69, .11, 28), darkMat);
-  baseRing.position.y = .05; group.add(baseRing);
 
-  const spout = new THREE.Mesh(new THREE.ConeGeometry(.22, .72, 18), metalMat);
-  spout.rotation.z = Math.PI * .38; spout.position.set(-.64, 1.02, 0); spout.castShadow = true; group.add(spout);
+  // 低くフラットな着脱ふたと、上面の給湯ロックボタン。
+  const lidRim = new THREE.Mesh(new THREE.CylinderGeometry(.46, .5, .075, 36), bodyHighlightMat);
+  lidRim.position.y = 1.405; lidRim.castShadow = true; group.add(lidRim);
+  const lid = new THREE.Mesh(new THREE.CylinderGeometry(.43, .46, .075, 36), bodyMat);
+  lid.position.y = 1.47; lid.castShadow = true; group.add(lid);
+  const lockButton = new THREE.Mesh(new THREE.CapsuleGeometry(.07, .11, 5, 12), darkMat);
+  lockButton.rotation.z = Math.PI / 2; lockButton.scale.y = .52; lockButton.position.set(-.04, 1.54, .02); group.add(lockButton);
+
+  // 薄い電源プレート。識別色は細いリングだけに抑える。
+  const powerBase = new THREE.Mesh(new THREE.CylinderGeometry(.625, .65, .075, 36), darkMat);
+  powerBase.position.y = .015; powerBase.castShadow = true; group.add(powerBase);
+  const baseRing = new THREE.Mesh(new THREE.CylinderGeometry(.61, .625, .055, 36), baseMat);
+  baseRing.position.y = .07; group.add(baseRing);
+  const accentRing = new THREE.Mesh(new THREE.TorusGeometry(.605, .018, 6, 36), accentMat);
+  accentRing.rotation.x = Math.PI / 2; accentRing.position.y = .105; group.add(accentRing);
+
+  // 金属の長い口ではなく、本体と一体になった短い三角形の注ぎ口。
+  const spoutShape = new THREE.Shape();
+  spoutShape.moveTo(-.53, 1.05);
+  spoutShape.lineTo(-.84, 1.16);
+  spoutShape.lineTo(-.55, 1.31);
+  spoutShape.lineTo(-.48, 1.23);
+  spoutShape.closePath();
+  const spout = new THREE.Mesh(new THREE.ExtrudeGeometry(spoutShape, { depth: .25, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: .025, bevelThickness: .025 }), bodyMat);
+  spout.position.z = -.125; spout.castShadow = true; group.add(spout);
+  const spoutOpening = new THREE.Mesh(new THREE.BoxGeometry(.045, .105, .2), darkMat);
+  spoutOpening.rotation.z = -.23; spoutOpening.position.set(-.82, 1.17, 0); group.add(spoutOpening);
+
+  // 側面の縦長水量窓。淡い水色と目盛りで「わく子」らしい表情を作る。
+  const gauge = new THREE.Mesh(new THREE.CapsuleGeometry(.075, .29, 6, 14), gaugeMat);
+  gauge.scale.z = .18; gauge.position.set(.27, .76, .56); group.add(gauge);
+  const gaugeWater = new THREE.Mesh(new THREE.CapsuleGeometry(.045, .17, 5, 12), gaugeWaterMat);
+  gaugeWater.scale.z = .2; gaugeWater.position.set(.27, .68, .578); group.add(gaugeWater);
+  for (let mark = 0; mark < 3; mark++) {
+    const tick = new THREE.Mesh(new THREE.BoxGeometry(.055, .012, .018), bodyHighlightMat);
+    tick.position.set(.31, .65 + mark * .13, .608); group.add(tick);
+  }
+
+  // 本体と同色の、太く握りやすい一体型Dハンドル。
   const handleCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(.47, 1.22, 0), new THREE.Vector3(.92, 1.15, 0),
-    new THREE.Vector3(1.02, .62, 0), new THREE.Vector3(.57, .25, 0)
+    new THREE.Vector3(.46, 1.18, 0), new THREE.Vector3(.73, 1.25, 0),
+    new THREE.Vector3(.94, 1.11, 0), new THREE.Vector3(1.0, .75, 0),
+    new THREE.Vector3(.97, .4, 0), new THREE.Vector3(.79, .25, 0),
+    new THREE.Vector3(.52, .33, 0)
   ]);
-  const handle = new THREE.Mesh(new THREE.TubeGeometry(handleCurve, 24, .085, 10, false), darkMat);
+  const handle = new THREE.Mesh(new THREE.TubeGeometry(handleCurve, 40, .105, 12, false), bodyMat);
   handle.castShadow = true; group.add(handle);
+  const gripInsetCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(.75, 1.16, -.015), new THREE.Vector3(.88, 1.03, -.015),
+    new THREE.Vector3(.91, .72, -.015), new THREE.Vector3(.88, .43, -.015)
+  ]);
+  const gripInset = new THREE.Mesh(new THREE.TubeGeometry(gripInsetCurve, 24, .025, 8, false), bodyHighlightMat);
+  group.add(gripInset);
 
   const ledMat = new THREE.MeshStandardMaterial({ color: 0x38433d, emissive: 0x000000, emissiveIntensity: 0 });
   const led = new THREE.Mesh(new THREE.SphereGeometry(.07, 12, 12), ledMat);
-  led.position.set(.2, .17, .58); group.add(led);
+  led.position.set(-.18, .16, .59); group.add(led);
 
   const selector = new THREE.Mesh(new THREE.RingGeometry(.75, .82, 32), new THREE.MeshBasicMaterial({ color: 0xb7ee68, side: THREE.DoubleSide, transparent: true, opacity: 0 }));
   selector.rotation.x = -Math.PI / 2; selector.position.y = .015; group.add(selector);
