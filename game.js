@@ -7,6 +7,7 @@ import { planWaterReturn, transferReturnedWater } from "./water-return.js";
 import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE } from "./timing.js";
 import { SERVING_TARGET, findServingQueueIndex, pourAvailableWater } from "./serving.js";
 import { arrangePotQueue } from "./pot-queue.js";
+import { keyboardAction } from "./keybindings.js";
 
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -749,15 +750,18 @@ addEventListener("pointermove", e => {
 });
 
 addEventListener("keydown", e => {
-  if (/^[1-5]$/.test(e.key) && Number(e.key) <= state.activeKettles) selectKettle(Number(e.key) - 1);
-  if (e.key.toLowerCase() === "f" && !e.repeat) beginFill();
-  if (e.key.toLowerCase() === "r") returnWaterToKettle();
-  if (e.key.toLowerCase() === "s") serveSelected();
-  if (e.code === "Space") { e.preventDefault(); heatSelected(); }
+  const action = keyboardAction(e.code, state.activeKettles);
+  if (!action || (e.repeat && action !== "fill")) return;
+  e.preventDefault();
+  if (action.startsWith("kettle-")) selectKettle(Number(action.slice(7)));
+  else if (action === "fill" && !e.repeat) beginFill();
+  else if (action === "heat") heatSelected();
+  else if (action === "return") returnWaterToKettle();
+  else if (action === "serve") serveSelected();
 });
 
 addEventListener("keyup", e => {
-  if (e.key.toLowerCase() === "f") endFill();
+  if (e.code === "KeyA") endFill();
 });
 addEventListener("blur", endFill);
 
