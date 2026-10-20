@@ -6,6 +6,7 @@ import { selection, updateSetupUI } from "./setup.js";
 import { planWaterReturn, transferReturnedWater } from "./water-return.js";
 import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE } from "./timing.js";
 import { SERVING_TARGET, findServingQueueIndex, pourAvailableWater } from "./serving.js";
+import { arrangePotQueue } from "./pot-queue.js";
 
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -111,8 +112,8 @@ function makeKettle(index, x, z) {
 
 const potData = [];
 const POT_QUEUE_POSITIONS = [
-  [-4.65, -.45], [-3.45, -.45], [-2.25, -.45], [-1.05, -.45],
-  [-4.65, .75], [-3.45, .75], [-2.25, .75], [-1.05, .75]
+  [-4.65, -.45], [-4.65, .75], [-3.45, -.45], [-3.45, .75],
+  [-2.25, -.45], [-2.25, .75], [-1.05, -.45], [-1.05, .75]
 ];
 
 function makeCoffeePot(index, x) {
@@ -373,10 +374,7 @@ function returnWaterToKettle() {
   const pot = plan.pot;
   const result = transferReturnedWater(k, pot, plan.transferAmount);
   pot.flash = 1; pot.returnAnim = 1;
-  if (result.complete) {
-    state.potQueue.splice(plan.queueIndex, 1);
-    state.potQueue.push(pot.index);
-  }
+  arrangePotQueue(state.potQueue, potData);
   feedback.play("recycle");
   feedback.pulse(ui.returnWater);
   const remainder = result.complete ? "" : ` / ポット残り${Math.round(result.remaining * 1000)}ml`;
@@ -399,6 +397,7 @@ function serveSelected() {
   const pour = pourAvailableWater(k, pot, state.selectedDripper);
   k.pourAnim = 1; pot.flash = 1;
   if (!pour.complete) {
+    arrangePotQueue(state.potQueue, potData);
     feedback.play("recycle");
     feedback.pulse(ui.serve);
     toast(`${Math.round(pour.transferred * 1000)}ml注湯 / ポット ${Math.round(pot.water * 1000)} / 900ml`);
@@ -634,6 +633,7 @@ function tick(now) {
         pot.temp = Math.max(22, pot.temp - (6 + Math.random() * 4));
         pot.flash = 1;
         if (!state.potQueue.includes(pot.index)) state.potQueue.push(pot.index);
+        arrangePotQueue(state.potQueue, potData);
       } else if (!wasBusy && pot.water > 0) {
         pot.temp = Math.max(22, pot.temp - .18 * rawDt);
       }

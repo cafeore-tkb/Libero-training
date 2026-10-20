@@ -87,7 +87,7 @@ button { color: inherit; }
 .pot-rack { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
 .pot-rack-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: var(--muted); font: 500 8px "DM Mono"; letter-spacing: .1em; }
 .pot-rack-label b { color: var(--green); font-size: 9px; }
-.pot-queue { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.pot-queue { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 27px); grid-auto-flow: column; gap: 4px; padding: 3px; background: linear-gradient(90deg, rgba(183, 238, 104, .06), transparent 46%, rgba(121, 185, 197, .08)); }
 .pot-slot { min-width: 0; height: 27px; display: grid; place-items: center; padding: 0 3px; overflow: hidden; border: 1px solid var(--line); color: var(--muted); background: transparent; font: 500 8px "DM Mono"; white-space: nowrap; }
 .pot-slot.head { border-color: var(--orange); color: #1b1712; background: var(--orange); }
 .pot-slot.head.returned { border-color: #79b9c5; color: #102126; background: #79b9c5; }
@@ -267,7 +267,7 @@ h1 em { color: var(--green); font-style: normal; }
   .kettle-panel { top: auto; right: 12px; bottom: 76px; width: calc(100% - 24px); }
   .kettle-panel .readout, .kettle-panel .temperature-track, .kettle-panel .state-line { display: none; }
   .pot-rack { margin-top: 8px; padding-top: 8px; }
-  .pot-queue { grid-template-columns: repeat(8, 1fr); }
+  .pot-queue { grid-template-columns: repeat(8, 1fr); grid-template-rows: 24px; grid-auto-flow: row; }
   .pot-slot { height: 24px; font-size: 7px; }
   .pot-rack-label { display: none; }
   .target-line { font-size: 8px; text-align: center; }
