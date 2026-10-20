@@ -1,9 +1,9 @@
 export const SERVICE_WEIGHTS = Object.freeze({ "on-time": 1, delayed: .5, critical: .1, overdue: 0 });
 export const SERVICE_RANKS = Object.freeze([
-  { rank: "S", minimum: 100 },
-  { rank: "A", minimum: 95 },
-  { rank: "B", minimum: 85 },
-  { rank: "C", minimum: 70 },
+  { rank: "S", minimum: 90 },
+  { rank: "A", minimum: 80 },
+  { rank: "B", minimum: 70 },
+  { rank: "C", minimum: 60 },
   { rank: "D", minimum: 50 },
   { rank: "F", minimum: 0 }
 ]);

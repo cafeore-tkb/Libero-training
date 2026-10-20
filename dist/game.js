@@ -555,7 +555,7 @@ function updateUI() {
   state.achievement = evaluation.percentage;
   ui.achievement.textContent = achievementLabel(state.achievement);
   ui.achievement.parentElement.classList.toggle("warning", state.achievement !== null && state.achievement < 85);
-  ui.achievement.parentElement.title = `提供時の状態：ON TIME 100% / DELAYED 50% / CRITICAL 10% / OVERDUE 0%。評価対象 ${evaluation.evaluated}件（未提供 ${evaluation.unserved}件は0%）。猶予中 ${evaluation.grace}件は保留。S:100% / A:95%以上 / B:85%以上 / C:70%以上 / D:50%以上 / F:50%未満。`;
+  ui.achievement.parentElement.title = `提供時の状態：ON TIME 100% / DELAYED 50% / CRITICAL 10% / OVERDUE 0%。評価対象 ${evaluation.evaluated}件（未提供 ${evaluation.unserved}件は0%）。猶予中 ${evaluation.grace}件は保留。S:90%以上 / A:80%以上 / B:70%以上 / C:60%以上 / D:50%以上 / F:50%未満。`;
   ui.combo.textContent = `${state.combo}`;
   ui.flowHud.classList.toggle("in-flow", state.flowEffect > 0);
   const targetChain = state.combo < 3 ? 3 : state.combo < 5 ? 5 : (Math.floor(state.combo / 10) + 1) * 10;

@@ -49,7 +49,7 @@ test("fresh end-of-shift requests remain ungraded while unserved late ones lower
 });
 
 test("rank boundaries cover the full achievement range without collapsing failures into C", () => {
-  for (const [value, rank] of [[100,"S"],[99.99,"A"],[95,"A"],[94.99,"B"],[85,"B"],[84.99,"C"],[70,"C"],[69.99,"D"],[50,"D"],[49.99,"F"],[0,"F"]]) {
+  for (const [value, rank] of [[100,"S"],[90,"S"],[89.99,"A"],[80,"A"],[79.99,"B"],[70,"B"],[69.99,"C"],[60,"C"],[59.99,"D"],[50,"D"],[49.99,"F"],[0,"F"]]) {
     assert.equal(serviceRank(value), rank);
   }
   assert.equal(achievementLabel(94.999), "94.9%");
@@ -57,12 +57,12 @@ test("rank boundaries cover the full achievement range without collapsing failur
   assert.deepEqual(createServiceCounts(), { "on-time": 0, delayed: 0, critical: 0, overdue: 0 });
 });
 
-test("only a fully on-time run earns S; a single late or unserved request lowers the rank", () => {
+test("rank is assigned from the final achievement in ten-point bands", () => {
   assert.equal(serviceRank(evaluate({ "on-time": 10 }).percentage), "S");
   assert.equal(evaluate({ "on-time": 9, delayed: 1 }).percentage, 95);
-  assert.equal(serviceRank(evaluate({ "on-time": 9, delayed: 1 }).percentage), "A");
-  assert.equal(serviceRank(evaluate({ "on-time": 9, critical: 1 }).percentage), "B");
-  assert.equal(serviceRank(evaluate({ "on-time": 9, overdue: 1 }).percentage), "B");
-  assert.equal(serviceRank(evaluate({ "on-time": 9 }, [order(66)]).percentage), "B");
-  assert.equal(serviceRank(evaluate({ "on-time": 999, delayed: 1 }).percentage), "A");
+  assert.equal(serviceRank(evaluate({ "on-time": 9, delayed: 1 }).percentage), "S");
+  assert.equal(serviceRank(evaluate({ "on-time": 9, critical: 1 }).percentage), "S");
+  assert.equal(serviceRank(evaluate({ "on-time": 9, overdue: 1 }).percentage), "S");
+  assert.equal(serviceRank(evaluate({ "on-time": 8, overdue: 2 }).percentage), "A");
+  assert.equal(serviceRank(evaluate({ "on-time": 7, overdue: 3 }).percentage), "B");
 });
