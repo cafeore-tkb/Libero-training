@@ -85,5 +85,13 @@ export function keyboardAction(code, activeKettles, bindings = currentBindings) 
     action = BINDING_ACTIONS.find(item => item.id.startsWith("kettle-") && bindings[item.id] === `Digit${code.slice(-1)}`)?.id;
   }
   if (action?.startsWith("kettle-") && Number(action.slice(7)) >= activeKettles) return null;
-  return action || null;
+  if (action) return action;
+  if (activeKettles > 0 && code === "ArrowLeft") return "previous-kettle";
+  if (activeKettles > 0 && code === "ArrowRight") return "next-kettle";
+  return null;
+}
+
+export function neighboringKettleIndex(selected, direction, activeKettles) {
+  if (activeKettles <= 0) return null;
+  return (selected + direction + activeKettles) % activeKettles;
 }

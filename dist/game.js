@@ -7,7 +7,7 @@ import { planWaterReturn, transferReturnedWater } from "./water-return.js";
 import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE } from "./timing.js";
 import { SERVING_TARGET, findServingQueueIndex, pourAvailableWater } from "./serving.js";
 import { arrangePotQueue, potQueueLayout, POT_QUEUE_POSITIONS } from "./pot-queue.js";
-import { keyboardAction } from "./keybindings.js";
+import { keyboardAction, neighboringKettleIndex } from "./keybindings.js";
 import { updateKeyBindingLabels } from "./keybindings-ui.js";
 import { createPauseController } from "./pause.js";
 
@@ -828,9 +828,11 @@ addEventListener("keydown", e => {
   }
   if (pause.paused) return;
   const action = keyboardAction(e.code, state.activeKettles);
-  if (!action || (e.repeat && action !== "fill")) return;
+  if (!action) return;
   e.preventDefault();
-  if (action.startsWith("kettle-")) selectKettle(Number(action.slice(7)));
+  if (e.repeat && action !== "fill") return;
+  if (action === "previous-kettle" || action === "next-kettle") selectKettle(neighboringKettleIndex(state.selected, action === "previous-kettle" ? -1 : 1, state.activeKettles));
+  else if (action.startsWith("kettle-")) selectKettle(Number(action.slice(7)));
   else if (action === "fill" && !e.repeat) beginFill();
   else if (action === "heat") heatSelected();
   else if (action === "return") returnWaterToKettle();

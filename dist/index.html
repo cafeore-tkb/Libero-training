@@ -78,7 +78,7 @@
         <button id="serve-button" class="action-button accent" data-keybinding-control="serve" aria-keyshortcuts="F"><kbd data-keybinding-label="serve">F</kbd><span><small>STEP 03</small>ある分を注ぐ</span></button>
       </section>
 
-      <div class="hint"><span>ドラッグ</span> 視点移動 <i></i> <span id="kettle-shortcuts">1—3</span> ケトル選択</div>
+      <div class="hint"><span>ドラッグ</span> 視点移動 <i></i> <span id="kettle-shortcuts">1—3 / ← →</span> ケトル選択</div>
 
       <div id="toast" class="toast" role="status"></div>
       <div id="feedback-layer" class="feedback-layer" aria-hidden="true"></div>
@@ -181,7 +181,7 @@
           <section><h3>操作</h3><div id="action-keybindings" class="binding-list"></div></section>
           <section><h3>ケトル選択</h3><div id="kettle-keybindings" class="binding-list"></div></section>
         </div>
-        <p class="keybindings-help">使用中のキーは自動で入れ替えます。Escでキー入力を取り消せます。<br />JIS配列の物理キーに対応しています。</p>
+        <p class="keybindings-help">使用中のキーは自動で入れ替えます。Escでキー入力を取り消せます。<br />未割り当ての←／→でもケトルを切り替えられます（端で循環）。<br />JIS配列の物理キーに対応しています。</p>
         <div class="keybindings-footer">
           <p id="keybindings-status" role="status" aria-live="polite"></p>
           <button type="button" id="keybindings-reset">初期設定に戻す</button>

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ACTION_KEYS, DEFAULT_KEYBINDINGS, KEYBINDINGS_STORAGE_KEY, getKeyBindings, isBindableCode, keyLabel, keyboardAction, readKeyBindings, rebindKey, saveKeyBindings, validKeyBindings } from "./keybindings.js";
+import { ACTION_KEYS, DEFAULT_KEYBINDINGS, KEYBINDINGS_STORAGE_KEY, getKeyBindings, isBindableCode, keyLabel, keyboardAction, neighboringKettleIndex, readKeyBindings, rebindKey, saveKeyBindings, validKeyBindings } from "./keybindings.js";
 
 test("JIS home-row physical keys map to the four actions", () => {
   assert.deepEqual(ACTION_KEYS, { KeyA: "fill", KeyS: "heat", KeyD: "return", KeyF: "serve" });
@@ -16,6 +16,27 @@ test("number-row and numpad kettle shortcuts respect the active kettle count", (
   assert.equal(keyboardAction("Numpad2", 3), "kettle-1");
   assert.equal(keyboardAction("Digit4", 3), null);
   assert.equal(keyboardAction("KeyR", 3), null);
+});
+
+test("left and right arrows supplement number selection and wrap only within active kettles", () => {
+  assert.equal(keyboardAction("ArrowLeft", 3), "previous-kettle");
+  assert.equal(keyboardAction("ArrowRight", 3), "next-kettle");
+  assert.equal(keyboardAction("ArrowUp", 3), null);
+  assert.equal(keyboardAction("ArrowRight", 0), null);
+  for (const count of [2, 3, 4, 5]) {
+    for (let selected = 0; selected < count; selected++) {
+      assert.equal(neighboringKettleIndex(selected, 1, count), (selected + 1) % count);
+      assert.equal(neighboringKettleIndex(selected, -1, count), (selected + count - 1) % count);
+    }
+  }
+  assert.equal(neighboringKettleIndex(0, 1, 0), null);
+  assert.equal(keyboardAction("Digit2", 3), "kettle-1");
+});
+
+test("explicit custom arrow bindings take priority over neighboring-kettle shortcuts", () => {
+  const bindings = rebindKey(DEFAULT_KEYBINDINGS, "fill", "ArrowLeft").bindings;
+  assert.equal(keyboardAction("ArrowLeft", 3, bindings), "fill");
+  assert.equal(keyboardAction("ArrowRight", 3, bindings), "next-kettle");
 });
 
 test("rebinding an occupied key swaps actions without losing either binding", () => {

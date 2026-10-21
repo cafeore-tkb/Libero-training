@@ -1,4 +1,4 @@
-import { BINDING_ACTIONS, DEFAULT_KEYBINDINGS, getKeyBindings, isBindableCode, keyLabel, rebindKey, saveKeyBindings } from "./keybindings.js";
+import { BINDING_ACTIONS, DEFAULT_KEYBINDINGS, getKeyBindings, isBindableCode, keyLabel, keyboardAction, rebindKey, saveKeyBindings } from "./keybindings.js";
 
 const dialog = document.querySelector("#keybindings-dialog");
 const status = document.querySelector("#keybindings-status");
@@ -24,8 +24,12 @@ export function updateKeyBindingLabels() {
   });
   const hint = document.querySelector("#kettle-shortcuts");
   if (hint) {
-    const labels = Array.from({ length: Number(hint.dataset.count || 3) }, (_, index) => keyLabel(bindings[`kettle-${index}`]));
-    hint.textContent = labels.every((label, index) => label === String(index + 1)) ? `1—${labels.length}` : labels.join(" / ");
+    const count = Number(hint.dataset.count || 3);
+    const labels = Array.from({ length: count }, (_, index) => keyLabel(bindings[`kettle-${index}`]));
+    const direct = labels.every((label, index) => label === String(index + 1)) ? `1—${labels.length}` : labels.join(" / ");
+    const arrows = [["ArrowLeft", "previous-kettle"], ["ArrowRight", "next-kettle"]]
+      .filter(([code, action]) => keyboardAction(code, count, bindings) === action).map(([code]) => keyLabel(code));
+    hint.textContent = [direct, arrows.join(" ")].filter(Boolean).join(" / ");
   }
   buttons.forEach((button, id) => {
     button.classList.toggle("listening", capturing === id);
