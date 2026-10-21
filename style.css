@@ -209,7 +209,7 @@ h1 em { color: var(--green); font-style: normal; }
 .duration-options .setup-option { min-height: 100px; }
 .duration-options .setup-option b { display: block; min-height: 0; font: 700 var(--setup-label)/1.4 "Noto Sans JP", sans-serif; letter-spacing: 0; }
 .duration-value { display: block; margin-top: 9px; font: 500 var(--setup-value)/1.4 "DM Mono"; letter-spacing: 0; }
-.duration-unit { margin-left: 3px; font-size: var(--setup-copy); letter-spacing: 0; }
+.duration-unit { margin-left: 3px; font-family: "Noto Sans JP", sans-serif; font-size: var(--setup-copy); letter-spacing: 0; }
 .description-group { display: flex; flex-direction: column; }
 .description-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 5px 0; }
 .description-steps > span { display: flex; align-items: center; gap: 9px; min-width: 0; color: #e3eade; font-size: var(--setup-label); line-height: 1.4; white-space: nowrap; }

@@ -383,7 +383,7 @@ function applyConfiguration() {
   ui.dripperLabel.textContent = `${state.activeDrippers} DRIPPERS`;
   ui.kettleShortcuts.dataset.count = String(state.activeKettles);
   updateKeyBindingLabels();
-  ui.shiftStatus.innerHTML = `<span class="live-dot"></span>${difficulty.label} / ${slot.label} / ${state.playDuration}s`;
+  ui.shiftStatus.innerHTML = `<span class="live-dot"></span>${difficulty.label} / ${slot.label} / ${state.playDuration}秒`;
   canvas.setAttribute("aria-label", `右側に配置された${state.activeKettles}台の電気ケトルと、左側に並ぶコーヒーポットキューの3D作業台`);
 
   scene.fog.color.setHex(slot.fog);
@@ -554,7 +554,7 @@ function endGame() {
   state.achievement = evaluation.percentage;
   const rank = serviceRank(state.achievement);
   $("#result-rank").textContent = rank ? `RANK ${rank}` : "未評価";
-  ui.resultMode.textContent = `${DIFFICULTIES[state.difficulty].label} / ${TIME_SLOTS[state.timeSlot].label} / ${state.playDuration} SEC`;
+  ui.resultMode.textContent = `${DIFFICULTIES[state.difficulty].label} / ${TIME_SLOTS[state.timeSlot].label} / ${state.playDuration}秒`;
   const rankMessages = {
     S: "完全達成。評価対象のすべての注文をON TIMEで提供しました。",
     A: "高い安定感。あと少しで全件ON TIMEです。",
@@ -597,7 +597,7 @@ function renderOrders() {
     ORDER_STAGES.forEach(item => element.classList.toggle(item.key, stage?.key === item.key));
     element.style.setProperty("--life", `${life}%`);
     element.querySelector(".order-copy small").textContent = order ? `${stage.label} / 900ml` : "リクエスト待機中";
-    element.querySelector(".order-time").textContent = order?.overdue ? "OVER" : order ? `${Math.ceil(order.time)}s` : "—";
+    element.querySelector(".order-time").textContent = order?.overdue ? "OVER" : order ? `${Math.ceil(order.time)}秒` : "—";
   }
   ui.count.textContent = state.orders.length;
 }
@@ -678,7 +678,7 @@ function tick(now) {
     state.time = Math.max(0, state.time - rawDt);
     feedback.updateMusic(state.time, state.playDuration);
     if (previousTime > 10 && state.time <= 10) {
-      feedback.announce("LAST 10 SECONDS", "最後まで、流れをつなげ。", "#ffbc76");
+      feedback.announce("残り10秒", "最後まで、流れをつなげ。", "#ffbc76");
       feedback.play("start");
       feedback.pulse(ui.timer);
     }
