@@ -519,7 +519,10 @@ function resetGame() {
   feedback.unlockAudio();
   const difficulty = DIFFICULTIES[state.difficulty];
   Object.assign(state, { running: true, activeKettles: difficulty.kettles, activeDrippers: difficulty.drippers, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: state.playDuration, achievement: null, serviceCounts: createServiceCounts(), combo: 0, bestCombo: 0, served: 0, perfect: 0, recoveries: 0, flowEffect: 0, orderId: 1, orders: [], nextOrder: .6 });
-  kettleData.forEach(k => Object.assign(k, { water: 0, temp: 22, state: "empty", boilTime: 0, pourAnim: 0 }));
+  kettleData.forEach(k => {
+    Object.assign(k, { water: 1.2, temp: 100, state: "ready", boilTime: 0, pourAnim: 0 });
+    k.group.rotation.x = 0;
+  });
   potData.forEach((pot, i) => {
     Object.assign(pot, { water: 0, temp: 22, waterLevel: 0, flash: 0, returnAnim: 0, busyTime: 0, presentationTime: 0, assignedDripper: null });
     pot.group.visible = true; pot.group.rotation.z = 0; pot.liquid.visible = false;
