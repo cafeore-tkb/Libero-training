@@ -6,7 +6,7 @@ import { selection, updateSetupUI } from "./setup.js";
 import { planWaterReturn, transferReturnedWater } from "./water-return.js";
 import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE } from "./timing.js";
 import { SERVING_TARGET, findServingQueueIndex, pourAvailableWater } from "./serving.js";
-import { arrangePotQueue } from "./pot-queue.js";
+import { arrangePotQueue, potQueueLayout, POT_QUEUE_POSITIONS } from "./pot-queue.js";
 import { keyboardAction } from "./keybindings.js";
 
 const canvas = document.querySelector("#scene");
@@ -20,8 +20,10 @@ renderer.toneMappingExposure = 1.05;
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x12221c, 0.034);
 const camera = new THREE.PerspectiveCamera(39, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 6.2, 10.8);
-camera.lookAt(0, 1.25, 0);
+const WORKSPACE_CENTER = 1.35;
+const CAMERA_DISTANCE = 19.5;
+camera.position.set(WORKSPACE_CENTER, 8.2, CAMERA_DISTANCE);
+camera.lookAt(WORKSPACE_CENTER, 1.25, .35);
 
 const hemisphere = new THREE.HemisphereLight(0xd9f2df, 0x172019, 2.2);
 scene.add(hemisphere);
@@ -40,17 +42,17 @@ floor.receiveShadow = true;
 scene.add(floor);
 
 const counter = new THREE.Group();
-const top = new THREE.Mesh(new THREE.BoxGeometry(11.5, 0.28, 3.35), new THREE.MeshStandardMaterial({ color: 0x9c7554, roughness: 0.72 }));
-top.position.y = 1.25;
+const top = new THREE.Mesh(new THREE.BoxGeometry(14.5, 0.28, 5.6), new THREE.MeshStandardMaterial({ color: 0x9c7554, roughness: 0.72 }));
+top.position.set(WORKSPACE_CENTER, 1.25, .55);
 top.castShadow = top.receiveShadow = true;
 counter.add(top);
-const base = new THREE.Mesh(new THREE.BoxGeometry(10.7, 1.25, 2.6), new THREE.MeshStandardMaterial({ color: 0x23372e, roughness: 0.8 }));
-base.position.set(0, 0.5, 0.1);
+const base = new THREE.Mesh(new THREE.BoxGeometry(13.7, 1.25, 4.85), new THREE.MeshStandardMaterial({ color: 0x23372e, roughness: 0.8 }));
+base.position.set(WORKSPACE_CENTER, 0.5, .55);
 base.castShadow = base.receiveShadow = true;
 counter.add(base);
-for (let i = -4; i <= 4; i += 2) {
-  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.035, 1.05, 2.64), new THREE.MeshStandardMaterial({ color: 0x34483d }));
-  panel.position.set(i + .4, .5, .08); counter.add(panel);
+for (let i = -4; i <= 6; i += 2) {
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.035, 1.05, 4.89), new THREE.MeshStandardMaterial({ color: 0x34483d }));
+  panel.position.set(i + .4, .5, .55); counter.add(panel);
 }
 scene.add(counter);
 
@@ -159,10 +161,6 @@ function makeKettle(index, x, z) {
 ].forEach(([x, z], i) => makeKettle(i, x, z));
 
 const potData = [];
-const POT_QUEUE_POSITIONS = [
-  [-4.65, -.45], [-4.65, .75], [-3.45, -.45], [-3.45, .75],
-  [-2.25, -.45], [-2.25, .75], [-1.05, -.45], [-1.05, .75]
-];
 
 function makeCoffeePot(index, x) {
   const group = new THREE.Group();
@@ -684,9 +682,6 @@ function tick(now) {
       if (k.pourAnim > 0) k.pourAnim = Math.max(0, k.pourAnim - rawDt * POUR_ANIMATION_RATE);
       k.group.rotation.x = -Math.sin(k.pourAnim * Math.PI) * .32;
     });
-    const firstServingQueueIndex = findServingQueueIndex(state.potQueue, potData, state.selectedDripper);
-    const firstServingPotIndex = firstServingQueueIndex < 0 ? undefined : state.potQueue[firstServingQueueIndex];
-    const firstReturnedPotIndex = state.potQueue.find(index => potData[index].water > 0 && potData[index].assignedDripper == null && !(potData[index].busyTime > 0));
     potData.forEach(pot => {
       pot.flash = Math.max(0, pot.flash - rawDt * .8);
       pot.presentationTime = Math.max(0, (pot.presentationTime || 0) - rawDt);
@@ -702,14 +697,20 @@ function tick(now) {
       } else if (!wasBusy && pot.water > 0) {
         pot.temp = Math.max(22, pot.temp - .18 * rawDt);
       }
+    });
+    const potPositions = potQueueLayout(state.potQueue, potData);
+    const firstServingQueueIndex = findServingQueueIndex(state.potQueue, potData, state.selectedDripper);
+    const firstServingPotIndex = firstServingQueueIndex < 0 ? undefined : state.potQueue[firstServingQueueIndex];
+    const firstReturnedPotIndex = state.potQueue.find(index => potData[index].water > 0 && potData[index].assignedDripper == null && !(potData[index].busyTime > 0));
+    potData.forEach(pot => {
       pot.waterLevel = pot.busyTime > 0 ? .55 + (pot.busyTime / POT_BUSY_TIME) * .45 : pot.water / .9;
       pot.liquid.visible = pot.waterLevel > .01;
       pot.liquid.scale.y = Math.max(.02, pot.waterLevel);
       pot.liquid.position.y = .12 + .32 * pot.waterLevel;
-      const queueIndex = state.potQueue.indexOf(pot.index);
-      pot.group.visible = queueIndex >= 0 || pot.presentationTime > 0;
-      if (queueIndex >= 0) {
-        const [targetX, targetZ] = POT_QUEUE_POSITIONS[queueIndex];
+      const position = potPositions.get(pot.index);
+      pot.group.visible = Boolean(position) || pot.presentationTime > 0;
+      if (position) {
+        const [targetX, targetZ] = position;
         pot.group.position.x += (targetX - pot.group.position.x) * Math.min(1, rawDt * 7);
         pot.group.position.z += (targetZ - pot.group.position.z) * Math.min(1, rawDt * 7);
       }
@@ -746,7 +747,7 @@ addEventListener("pointerup", () => dragging = false);
 addEventListener("pointermove", e => {
   if (!dragging) return;
   cameraAngle += (e.clientX - dragX) * .003; cameraAngle = Math.max(-.28, Math.min(.28, cameraAngle)); dragX = e.clientX;
-  camera.position.x = Math.sin(cameraAngle) * 11; camera.position.z = Math.cos(cameraAngle) * 11; camera.lookAt(0, 1.25, 0);
+  camera.position.x = WORKSPACE_CENTER + Math.sin(cameraAngle) * CAMERA_DISTANCE; camera.position.z = Math.cos(cameraAngle) * CAMERA_DISTANCE; camera.lookAt(WORKSPACE_CENTER, 1.25, .35);
 });
 
 addEventListener("keydown", e => {
