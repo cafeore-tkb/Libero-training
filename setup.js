@@ -22,10 +22,12 @@ export function updateSetupUI() {
   });
   const lead = document.querySelector("#setup-lead");
   if (lead) lead.textContent = `${difficulty.kettles}台のケトルを回し、${difficulty.drippers}人のドリッパーから届く要求に応えよう。`;
-  document.querySelector("#difficulty-summary").textContent = `${difficulty.kettles} KETTLES · ${difficulty.drippers} DRIPPERS`;
+  document.querySelector("#difficulty-summary").textContent = `ケトル ${difficulty.kettles}台 / ドリッパー ${difficulty.drippers}人`;
   const limit = slot.orderStages.reduce((sum, seconds) => sum + seconds, 0);
-  document.querySelector("#time-summary").textContent = `${slot.pace} · ${slot.orderMin}〜${slot.orderMax}s · LIMIT ${limit}s`;
-  document.querySelector("#duration-summary").textContent = `SHIFT · ${selection.playDuration} SEC`;
+  document.querySelector("#time-summary").textContent = `注文間隔 ${slot.orderMin}〜${slot.orderMax}秒 / 制限 ${limit}秒`;
+  const minutes = Math.floor(selection.playDuration / 60);
+  const seconds = selection.playDuration % 60;
+  document.querySelector("#duration-summary").textContent = `${minutes}分${seconds ? `${seconds}秒` : ""}間のシフトに挑戦`;
 }
 
 document.querySelectorAll("button[data-difficulty], button[data-time-slot], button[data-play-duration]").forEach(button => {
