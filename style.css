@@ -76,7 +76,7 @@ button { color: inherit; }
 
 .orders-panel, .kettle-panel { position: fixed; z-index: 5; top: 116px; width: 238px; }
 .orders-panel { left: 32px; }
-.kettle-panel { right: 32px; padding: 17px; border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(14px); }
+.kettle-panel { right: 32px; padding: 14px; border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(14px); }
 .panel-label { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .panel-label b { display: grid; place-items: center; min-width: 24px; height: 21px; padding: 0 6px; color: #162116; background: var(--green); font-size: 10px; }
 .orders { display: grid; gap: 8px; }
@@ -100,22 +100,34 @@ button { color: inherit; }
 .order-copy small { color: var(--muted); font: 9px "DM Mono"; }
 .order-time { font: 500 13px "DM Mono"; }
 
-.readout { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px 0 12px; border-top: 1px solid var(--line); }
-.readout strong { display: block; margin-top: 7px; font: 400 25px "DM Mono"; }
-.readout small { margin-left: 2px; font-size: 11px; color: var(--muted); }
-.temperature-track { position: relative; height: 4px; margin: 7px 28px 13px 0; background: #415047; }
-.temperature-track i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, var(--green), var(--orange)); box-shadow: 0 0 10px var(--orange); transition: width .2s; }
-.temperature-track em { position: absolute; left: calc(100% + 7px); top: -5px; color: var(--muted); font: normal 9px "DM Mono"; }
-.state-line { min-height: 19px; margin: 0 0 14px; color: var(--green); font-size: 11px; }
+.instrument-gauges { display: grid; gap: 8px; margin-bottom: 10px; }
+.status-gauge { min-width: 0; padding: 8px; border: 1px solid #e6efe424; border-radius: 9px; background: #0b1712; }
+.gauge-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
+.gauge-heading > span { color: #d4dfd6; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.gauge-heading strong { color: #ffb36e; font: 500 28px/1 "DM Mono"; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gauge-heading small { margin-left: 3px; color: #c3cec6; font: 500 12px "DM Mono"; }
+.gauge-track { position: relative; height: 16px; overflow: hidden; border: 1px solid #e6efe426; border-radius: 5px; background: #2b3a31; }
+.gauge-fill { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #cb7e40, #ffb36e); transition: width .15s linear, background .2s; }
+.gauge-track::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(25% - 1px), #07100a55 calc(25% - 1px), #07100a55 25%); pointer-events: none; }
+.gauge-marker { position: absolute; z-index: 1; top: 0; bottom: 0; width: 2px; transform: translateX(-1px); background: #fff; box-shadow: 0 0 0 1px #122019aa; }
+.gauge-scale { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 5px; color: #aebdb2; font: 500 9px/1.3 "DM Mono", "Noto Sans JP", sans-serif; white-space: nowrap; }
+.gauge-scale b { color: #d7e3d8; font-size: 9px; font-weight: 500; }
+.water-gauge .gauge-heading strong { color: #8cdbe9; }
+.water-gauge .gauge-fill { background: linear-gradient(90deg, #398b9f, #8cdbe9); }
+.temperature-gauge.at-target { border-color: #a6df2e70; }
+.temperature-gauge.at-target .gauge-fill { background: linear-gradient(90deg, #70a528, var(--green)); }
+.temperature-gauge.at-target .gauge-heading strong, .temperature-gauge.at-target .gauge-scale b { color: var(--green); }
+.water-gauge.at-target .gauge-scale b { color: #8cdbe9; }
+.state-line { min-height: 19px; margin: 0 0 10px; color: var(--green); font-size: 11px; }
 .kettle-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
 .kettle-tab { height: 28px; border: 1px solid var(--line); background: transparent; color: var(--muted); font: 500 10px "DM Mono"; cursor: pointer; }
 .kettle-tab.active { border-color: var(--green); color: #162116; background: var(--green); }
 .kettle-tab.hot:not(.active) { color: var(--orange); border-color: #ff9b5680; }
-.pot-rack { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
+.pot-rack { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .pot-rack-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: var(--muted); font: 500 8px "DM Mono"; letter-spacing: .1em; }
 .pot-rack-label b { color: var(--green); font-size: 9px; }
-.pot-queue { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 27px); grid-auto-flow: column; gap: 4px; padding: 3px; background: linear-gradient(90deg, rgba(183, 238, 104, .06), transparent 46%, rgba(121, 185, 197, .08)); }
-.pot-slot { min-width: 0; height: 27px; display: grid; place-items: center; padding: 0 3px; overflow: hidden; border: 1px solid var(--line); color: var(--muted); background: transparent; font: 500 8px "DM Mono"; white-space: nowrap; }
+.pot-queue { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 24px); grid-auto-flow: column; gap: 4px; padding: 3px; background: linear-gradient(90deg, rgba(183, 238, 104, .06), transparent 46%, rgba(121, 185, 197, .08)); }
+.pot-slot { min-width: 0; height: 24px; display: grid; place-items: center; padding: 0 3px; overflow: hidden; border: 1px solid var(--line); color: var(--muted); background: transparent; font: 500 8px "DM Mono"; white-space: nowrap; }
 .pot-slot.head { border-color: var(--orange); color: #1b1712; background: var(--orange); }
 .pot-slot.head.returned { border-color: #79b9c5; color: #102126; background: #79b9c5; }
 .pot-slot.serve-next { border-color: var(--green); color: #162116; background: var(--green); }
@@ -300,7 +312,10 @@ h1 em { color: var(--green); font-style: normal; }
   .order { padding: 8px; }
   .order-copy small { display: none; }
   .kettle-panel { top: 125px; right: 12px; width: 170px; padding: 12px; }
-  .readout strong { font-size: 18px; }
+  .status-gauge { padding: 8px; }
+  .gauge-heading strong { font-size: 24px; }
+  .gauge-scale { font-size: 8px; }
+  .gauge-scale b { font-size: 8px; }
   .controls { bottom: 13px; width: calc(100% - 24px); gap: 4px; }
   .action-button { flex: 1; min-width: 0; height: 54px; padding: 0 9px; gap: 7px; }
   .action-button span { font-size: 11px; }
@@ -332,7 +347,11 @@ h1 em { color: var(--green); font-style: normal; }
   .order-copy { display: none; }
   .order-time { display: block; margin-top: 2px; font-size: 8px; }
   .kettle-panel { top: auto; right: 12px; bottom: 76px; width: calc(100% - 24px); }
-  .kettle-panel .readout, .kettle-panel .temperature-track, .kettle-panel .state-line { display: none; }
+  .kettle-panel .state-line { display: none; }
+  .instrument-gauges { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 9px; }
+  .gauge-heading { margin-bottom: 7px; }
+  .gauge-heading strong { font-size: clamp(21px, 6vw, 25px); }
+  .gauge-track { height: 16px; }
   .pot-rack { margin-top: 8px; padding-top: 8px; }
   .pot-queue { grid-template-columns: repeat(8, 1fr); grid-template-rows: 24px; grid-auto-flow: row; }
   .pot-slot { height: 24px; font-size: 7px; }
@@ -395,4 +414,44 @@ h1 em { color: var(--green); font-style: normal; }
   .duration-options .setup-option { min-height: 89px; }
   .shift-start { min-height: 64px; padding-top: 10px; padding-bottom: 10px; }
   .boot-status { margin: 6px 0; }
+}
+
+@media (max-height: 650px) and (min-width: 521px) {
+  .kettle-panel { padding: 12px; }
+  .kettle-panel .state-line { display: none; }
+  .kettle-panel .panel-label { margin-bottom: 8px; }
+  .status-gauge { padding: 7px 8px; }
+  .gauge-heading { margin-bottom: 5px; }
+  .gauge-track { height: 14px; }
+  .gauge-scale { margin-top: 4px; }
+  .instrument-gauges { gap: 6px; margin-bottom: 8px; }
+  .pot-rack { margin-top: 8px; padding-top: 8px; }
+  .pot-queue { grid-template-rows: repeat(2, 22px); }
+  .pot-slot { height: 22px; }
+}
+
+@media (max-height: 650px) and (min-width: 821px) {
+  .kettle-panel { top: 100px; }
+}
+
+@media (max-height: 620px) and (max-width: 520px) {
+  .kettle-panel .panel-label { display: none; }
+  .status-gauge { padding: 7px 8px; }
+  .instrument-gauges { margin-bottom: 7px; }
+  .pot-rack { margin-top: 6px; padding-top: 6px; }
+  .target-line { margin-top: 4px; }
+  .return-hint { margin-top: 4px; font-size: 9px; line-height: 1.4; }
+}
+
+@media (max-width: 360px) {
+  .topbar { gap: 8px; }
+  .brand { gap: 8px; }
+  .brand-mark { width: 32px; height: 32px; font-size: 20px; }
+  .brand b { font-size: 14px; }
+  .brand small { font-size: 8px; }
+  .feedback-toggles { gap: 5px; }
+  .feedback-toggles .icon-button { width: 31px; height: 31px; font-size: 10px; }
+  .metric, .timer { padding: 9px 8px; }
+  .metric strong, .timer strong { font-size: 20px; white-space: nowrap; }
+  .pause-trigger { width: 50px; flex-shrink: 0; }
 }

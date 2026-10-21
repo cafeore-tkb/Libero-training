@@ -283,7 +283,7 @@ const state = { running: false, difficulty: "normal", timeSlot: "afternoon", pla
 const $ = (q) => document.querySelector(q);
 const ui = {
   achievement: $("#achievement"), combo: $("#combo"), timer: $("#timer"), orders: $("#orders"), count: $("#order-count"),
-  number: $("#selected-number"), temp: $("#selected-temp"), water: $("#selected-water"), tempBar: $("#temp-bar"), state: $("#selected-state"),
+  number: $("#selected-number"), temp: $("#selected-temp"), water: $("#selected-water"), tempBar: $("#temp-bar"), waterBar: $("#water-bar"), tempGauge: $("#temperature-gauge"), waterGauge: $("#water-gauge"), state: $("#selected-state"),
   tabs: $("#kettle-tabs"), potQueue: $("#pot-queue"), availablePots: $("#available-pots"), target: $("#target-line"), returnHint: $("#return-hint"),
   fill: $("#fill-button"), heat: $("#heat-button"), returnWater: $("#return-button"), serve: $("#serve-button"), toast: $("#toast"),
   shiftStatus: $("#shift-status"), dripperLabel: $("#dripper-label"), kettleShortcuts: $("#kettle-shortcuts"), setupLead: $("#setup-lead"),
@@ -613,8 +613,19 @@ function updateUI() {
   ui.flowBar.style.width = `${state.flowEffect > 0 ? state.flowEffect / 8 * 100 : state.combo / targetChain * 100}%`;
   ui.flowHint.textContent = state.combo < 3 ? `時間超過前にあと${3 - state.combo}回連続提供で FLOW` : `${state.combo} CHAIN · 次は ${targetChain} CHAIN を目指せ`;
   ui.servedVolume.textContent = `${(state.served * .9).toFixed(1)} L SERVED`;
-  ui.number.textContent = `0${k.index + 1}`; ui.temp.innerHTML = `${Math.round(k.temp)}<small>°C</small>`; ui.water.innerHTML = `${k.water.toFixed(2)}<small>L</small>`;
-  ui.tempBar.style.width = `${Math.min(100, Math.max(0, (k.temp - 20) / 80 * 100))}%`;
+  const temperature = Math.min(100, Math.max(0, k.temp));
+  const waterMl = Math.round(Math.min(1.2, Math.max(0, k.water)) * 1000);
+  ui.number.textContent = `0${k.index + 1}`;
+  ui.temp.innerHTML = `${temperature.toFixed(1)}<small>°C</small>`;
+  ui.water.innerHTML = `${waterMl}<small>ml</small>`;
+  ui.tempBar.style.width = `${temperature}%`;
+  ui.waterBar.style.width = `${waterMl / 1200 * 100}%`;
+  ui.tempGauge.setAttribute("aria-valuenow", temperature.toFixed(1));
+  ui.tempGauge.setAttribute("aria-valuetext", `${temperature.toFixed(1)}°C、${k.water > 0 && k.temp >= 92 ? "注湯可能" : "92°C以上で注湯可能"}`);
+  ui.waterGauge.setAttribute("aria-valuenow", String(waterMl));
+  ui.waterGauge.setAttribute("aria-valuetext", `${waterMl}ml、満水1200ml、1回分900ml`);
+  ui.tempGauge.classList.toggle("at-target", k.water > 0 && k.temp >= 92);
+  ui.waterGauge.classList.toggle("at-target", k.water >= .9);
   const labels = { empty: "空 — 給水してください", filled: "待機中 — 加熱できます", heating: "加熱中 — 温度上昇", ready: "準備完了 — 提供できます" };
   ui.state.textContent = labels[k.state];
   [...ui.tabs.children].forEach((tab, i) => { tab.classList.toggle("active", i === state.selected); tab.classList.toggle("hot", kettleData[i].temp >= 92); });
