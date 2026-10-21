@@ -170,9 +170,9 @@ h1 em { color: var(--green); font-style: normal; }
 .setup-option:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 .setup-summary { display: block; margin-top: 13px; color: #adbcaf; font-size: 12px; line-height: 1.5; font-weight: 500; }
 .duration-options .setup-option { min-height: 100px; }
-.duration-options .setup-option b { display: block; font: 500 30px/1.2 "DM Mono"; letter-spacing: -.06em; }
+.duration-options .setup-option b { display: block; min-height: 0; font: 900 14px/1.3 "Noto Sans JP", sans-serif; letter-spacing: .015em; }
+.duration-value { display: block; margin-top: 9px; font: 500 28px/1.2 "DM Mono"; letter-spacing: -.06em; }
 .duration-unit { margin-left: 3px; font-size: 15px; letter-spacing: 0; }
-.duration-options .setup-option small { font-size: 11px; letter-spacing: .03em; }
 .description-group { display: flex; flex-direction: column; }
 .description-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 5px 0; }
 .description-steps > span { display: flex; align-items: center; gap: 9px; min-width: 0; color: #e3eade; font-size: 13px; line-height: 1.4; white-space: nowrap; }
@@ -299,7 +299,7 @@ h1 em { color: var(--green); font-style: normal; }
   .setup-group legend { padding: 0 4px; font-size: 10px; letter-spacing: .03em; }
   .setup-group legend > span { display: none; }
   .option-grid { grid-template-columns: 1fr 1fr; }
-  .duration-options { grid-template-columns: repeat(3, 1fr); }
+  .duration-options { grid-template-columns: 1fr; }
   .setup-option { min-height: 57px; padding: 7px 5px; border-radius: 5px; }
   .difficulty-options .setup-option, .time-options .setup-option { height: 61px; }
   .setup-option b { min-height: 28px; font-size: 10px; line-height: 1.2; letter-spacing: -.04em; }
@@ -311,10 +311,10 @@ h1 em { color: var(--green); font-style: normal; }
   .time-limit { margin-top: 4px; font-size: 9px; }
   .time-limit strong { font-size: 15px; }
   .setup-summary { margin-top: 9px; font-size: 10px; line-height: 1.6; }
-  .duration-options .setup-option { min-height: 82px; padding: 14px 2px; text-align: center; }
-  .duration-options .setup-option b { font-size: 21px; letter-spacing: -.09em; }
-  .duration-unit { display: block; margin: 2px 0 0; font-size: 10px; letter-spacing: 0; }
-  .duration-options .setup-option small { font-size: 7px; letter-spacing: -.06em; }
+  .duration-options .setup-option { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 38px; padding: 8px 7px; text-align: left; }
+  .duration-options .setup-option b { font-size: 10.5px; letter-spacing: -.025em; }
+  .duration-value { margin-top: 0; font-size: 18px; letter-spacing: -.05em; white-space: nowrap; }
+  .duration-unit { margin-left: 1px; font-size: 10px; letter-spacing: 0; }
   .description-steps { grid-template-columns: 1fr; gap: 7px; padding: 0; }
   .description-steps > span { gap: 6px; font-size: 11px; }
   .description-steps kbd { flex-basis: 21px; height: 22px; border-radius: 4px; font-size: 11px; }
