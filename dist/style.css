@@ -46,6 +46,33 @@ button { color: inherit; }
 .timer span { color: #49632c; }
 .timer.warning { background: var(--danger); color: white; }
 .timer.warning span { color: #681a17; }
+.pause-trigger { width: 62px; padding: 8px; border: 0; border-left: 1px solid #14211633; color: var(--ink); background: #24362b; cursor: pointer; }
+.pause-trigger[hidden] { display: none; }
+.pause-trigger > span { display: block; font-size: 24px; font-weight: 700; line-height: 1; }
+.pause-trigger small { font: 500 9px/1.8 "DM Mono"; letter-spacing: .08em; }
+.pause-trigger:hover { background: #344a30; }
+.pause-trigger:focus-visible { outline: 2px solid var(--green); outline-offset: -4px; }
+
+#pause-dialog { width: min(460px, calc(100% - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 28px; overflow-y: auto; border: 1px solid #627b49; border-radius: 18px; color: var(--ink); background: #14231d; box-shadow: 0 24px 90px #000b; }
+#pause-dialog::backdrop { background: #07110bc9; backdrop-filter: blur(7px); }
+.pause-heading { display: flex; align-items: center; justify-content: space-between; }
+.pause-heading .eyebrow { margin: 0; font-size: 11px; }
+.pause-symbol { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; color: var(--green); font-size: 20px; font-weight: 700; }
+#pause-title { margin: 14px 0 12px; font-size: clamp(26px, 5vw, 34px); line-height: 1.4; }
+#pause-description { margin: 0; color: #bdc9c0; font-size: 14px; line-height: 1.8; }
+.pause-snapshot { display: flex; align-items: center; gap: 20px; margin: 22px 0; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: #0c1912; }
+.pause-snapshot > div:last-child { min-width: 0; }
+.pause-snapshot span { display: block; margin-bottom: 8px; color: var(--muted); font-size: 11px; }
+.pause-snapshot strong { color: var(--green); font: 500 30px/1 "DM Mono"; }
+.pause-snapshot b { font: 500 12px/1.6 "DM Mono"; overflow-wrap: anywhere; }
+#pause-dialog .start-button { min-height: 58px; margin: 0; border-radius: 9px; font-size: 18px; }
+.pause-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pause-options button { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 13px 10px; border: 1px solid var(--line); border-radius: 8px; background: #1e3025; font-size: 12px; cursor: pointer; }
+.pause-options button:hover { border-color: var(--green); }
+#pause-dialog .text-button { display: block; margin: 16px auto 0; font-size: 12px; }
+.pause-hint { margin: 18px 0 0; color: var(--muted); font-size: 11px; text-align: center; }
+.pause-hint kbd { margin-right: 4px; padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; }
+#pause-dialog button:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
 
 .orders-panel, .kettle-panel { position: fixed; z-index: 5; top: 116px; width: 238px; }
 .orders-panel { left: 32px; }
@@ -176,9 +203,34 @@ h1 em { color: var(--green); font-style: normal; }
 .description-group { display: flex; flex-direction: column; }
 .description-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 5px 0; }
 .description-steps > span { display: flex; align-items: center; gap: 9px; min-width: 0; color: #e3eade; font-size: 13px; line-height: 1.4; white-space: nowrap; }
-.description-steps kbd { display: grid; place-items: center; flex: 0 0 32px; height: 32px; border: 1px solid #77907466; border-radius: 6px; color: var(--green); background: #1e3225; box-shadow: 0 2px #07100a; font: 500 14px "DM Mono"; }
+.description-steps kbd { display: grid; place-items: center; flex: 0 0 auto; min-width: 32px; height: 32px; padding: 0 6px; border: 1px solid #77907466; border-radius: 6px; color: var(--green); background: #1e3225; box-shadow: 0 2px #07100a; font: 500 14px "DM Mono"; white-space: nowrap; }
 .description-group p { margin: auto 0 0; padding-top: 12px; color: #adbcaf; font-size: 12px; line-height: 1.6; }
 .description-group p b { color: #e4d2b2; font-weight: 700; }
+.keybindings-link { padding: 0; border: 0; color: var(--green); background: none; font: inherit; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; cursor: pointer; }
+
+#keybindings-dialog { position: fixed; width: min(580px, calc(100% - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 20px; overflow-y: auto; border: 1px solid #536a48; border-radius: 16px; color: var(--ink); background: #14231d; box-shadow: 0 24px 90px #000b; }
+#keybindings-dialog::backdrop { background: #040a07d9; backdrop-filter: blur(7px); }
+.keybindings-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.keybindings-heading .eyebrow { margin: 0 0 6px; font-size: 10px; }
+.keybindings-heading h2 { margin: 0; font-size: 22px; line-height: 1.3; }
+#keybindings-close { width: 36px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: #0b1711; font-size: 25px; line-height: 1; cursor: pointer; }
+#keybindings-instructions { margin: 12px 0; color: #bdc9c0; font-size: 12px; line-height: 1.6; }
+.binding-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.binding-columns section { min-width: 0; }
+.binding-columns h3 { margin: 0 0 8px; color: #c3cfbd; font-size: 12px; }
+.binding-list { display: grid; gap: 6px; }
+.binding-key { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 7px; color: #e4eade; background: #0c1a12; text-align: left; cursor: pointer; }
+.binding-key > span { min-width: 0; font-size: 12px; line-height: 1.45; }
+.binding-key kbd { flex-shrink: 0; max-width: 94px; padding: 4px 6px; border: 1px solid #526448; border-radius: 4px; color: var(--green); background: #20311e; font: 500 12px/1.2 "DM Mono", "Noto Sans JP", sans-serif; overflow-wrap: anywhere; }
+.binding-key:hover, .binding-key.listening { border-color: var(--green); background: #26391d; }
+.binding-key.listening kbd { border-color: transparent; color: #e7f6d4; background: none; font-size: 10px; }
+.binding-key:focus-visible, #keybindings-close:focus-visible, #keybindings-reset:focus-visible, .keybindings-link:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.keybindings-help { margin: 12px 0 8px; color: #a7b6a8; font-size: 11px; line-height: 1.6; }
+.keybindings-footer { display: flex; align-items: center; gap: 12px; }
+#keybindings-status { flex: 1; min-height: 36px; margin: 0; color: var(--green); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+#keybindings-status.is-error { color: #ffbc76; }
+#keybindings-reset { flex-shrink: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; color: #d5dece; background: transparent; font-size: 12px; cursor: pointer; }
+#keybindings-reset:hover { border-color: var(--green); }
 .rules { display: grid; grid-template-columns: repeat(4, 1fr); margin: 27px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .intro-card .rules { margin: 18px 0; }
 .rules div { display: flex; gap: 11px; padding: 17px 10px; border-right: 1px solid var(--line); }
@@ -264,7 +316,7 @@ h1 em { color: var(--green); font-style: normal; }
   .time-options .setup-option b { font-size: 10px; }
   .time-options .time-range { font-size: 9px; }
   .description-steps > span { font-size: 11px; gap: 6px; }
-  .description-steps kbd { flex-basis: 26px; height: 28px; }
+  .description-steps kbd { min-width: 26px; height: 28px; padding: 0 5px; }
 }
 
 @media (max-width: 520px) {
@@ -317,7 +369,13 @@ h1 em { color: var(--green); font-style: normal; }
   .duration-unit { margin-left: 1px; font-size: 10px; letter-spacing: 0; }
   .description-steps { grid-template-columns: 1fr; gap: 7px; padding: 0; }
   .description-steps > span { gap: 6px; font-size: 11px; }
-  .description-steps kbd { flex-basis: 21px; height: 22px; border-radius: 4px; font-size: 11px; }
+  .description-steps kbd { min-width: 21px; height: 22px; padding: 0 4px; border-radius: 4px; font-size: 11px; }
+  #keybindings-dialog { padding: 18px 14px; }
+  .binding-columns { gap: 10px; }
+  .binding-key { min-height: 38px; padding: 6px 7px; gap: 5px; }
+  .binding-key > span { font-size: 11px; }
+  .binding-key kbd { max-width: 68px; font-size: 11px; padding: 4px; }
+  #keybindings-instructions { font-size: 11px; margin: 12px 0 15px; }
   .description-group p { padding-top: 9px; font-size: 10px; line-height: 1.5; }
   .shift-start { min-height: 60px; padding: 10px 14px; }
   .shift-start .start-label { font-size: 17px; }

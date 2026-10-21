@@ -1,5 +1,6 @@
 // Bind settings before importing anything that requires WebGL.
 import "./setup.js";
+import "./keybindings-ui.js";
 
 const startButton = document.querySelector("#start-button");
 const status = document.querySelector("#boot-status");

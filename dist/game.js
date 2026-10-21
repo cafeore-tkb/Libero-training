@@ -8,6 +8,8 @@ import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMA
 import { SERVING_TARGET, findServingQueueIndex, pourAvailableWater } from "./serving.js";
 import { arrangePotQueue, potQueueLayout, POT_QUEUE_POSITIONS } from "./pot-queue.js";
 import { keyboardAction } from "./keybindings.js";
+import { updateKeyBindingLabels } from "./keybindings-ui.js";
+import { createPauseController } from "./pause.js";
 
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -279,9 +281,39 @@ const ui = {
   fill: $("#fill-button"), heat: $("#heat-button"), returnWater: $("#return-button"), serve: $("#serve-button"), toast: $("#toast"),
   shiftStatus: $("#shift-status"), dripperLabel: $("#dripper-label"), kettleShortcuts: $("#kettle-shortcuts"), setupLead: $("#setup-lead"),
   difficultySummary: $("#difficulty-summary"), timeSummary: $("#time-summary"), resultMode: $("#result-mode"),
+  keyDialog: $("#keybindings-dialog"),
+  pauseDialog: $("#pause-dialog"), pauseButton: $("#pause-button"),
   flowHud: $("#flow-hud"), flowLabel: $("#flow-label"), flowBar: $("#flow-bar"), flowHint: $("#flow-hint"), servedVolume: $("#served-volume")
 };
 const feedback = createFeedback({ THREE, scene, camera });
+const pause = createPauseController({
+  onPause() {
+    endFill();
+    dragging = false;
+    feedback.stopMusic();
+  },
+  onResume() {
+    // Never charge time spent in a dialog to the next simulation frame.
+    last = performance.now();
+    if (state.running) feedback.startMusic(state.time, state.playDuration);
+  }
+});
+const canPlay = () => state.running && !pause.paused;
+
+function pauseGame() {
+  if (!state.running || ui.keyDialog.open || ui.pauseDialog.open) return;
+  pause.pause("menu");
+  const seconds = Math.ceil(state.time);
+  $("#pause-time").textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+  $("#pause-mode").textContent = `${DIFFICULTIES[state.difficulty].label} / ${TIME_SLOTS[state.timeSlot].label}`;
+  ui.pauseDialog.showModal();
+}
+
+function closePauseOverlays() {
+  pause.clear();
+  ui.keyDialog.close();
+  ui.pauseDialog.close();
+}
 
 function breakChain() {
   state.combo = 0;
@@ -311,6 +343,7 @@ function serviceCelebration(order, temperature) {
 for (let i = 0; i < 5; i++) {
   const button = document.createElement("button");
   button.className = "kettle-tab"; button.textContent = `0${i + 1}`; button.onclick = () => selectKettle(i);
+  button.dataset.keybindingControl = `kettle-${i}`;
   ui.tabs.append(button);
 }
 
@@ -341,7 +374,8 @@ function applyConfiguration() {
   ui.tabs.style.gridTemplateColumns = `repeat(${state.activeKettles}, 1fr)`;
   ui.orders.style.setProperty("--drippers", state.activeDrippers);
   ui.dripperLabel.textContent = `${state.activeDrippers} DRIPPERS`;
-  ui.kettleShortcuts.textContent = state.activeKettles === 1 ? "1" : `1—${state.activeKettles}`;
+  ui.kettleShortcuts.dataset.count = String(state.activeKettles);
+  updateKeyBindingLabels();
   ui.shiftStatus.innerHTML = `<span class="live-dot"></span>${difficulty.label} / ${slot.label} / ${state.playDuration}s`;
   canvas.setAttribute("aria-label", `右側に配置された${state.activeKettles}台の電気ケトルと、左側に並ぶコーヒーポットキューの3D作業台`);
 
@@ -354,6 +388,7 @@ function applyConfiguration() {
 }
 
 function selectKettle(index) {
+  if (pause.paused) return;
   if (index < 0 || index >= state.activeKettles) return;
   if (state.filling) endFill();
   state.selected = index;
@@ -362,6 +397,7 @@ function selectKettle(index) {
 }
 
 function selectDripper(index) {
+  if (pause.paused) return;
   if (index < 0 || index >= state.activeDrippers) return;
   state.selectedDripper = index;
   updateUI();
@@ -394,7 +430,7 @@ function getOrderStage(order) {
 }
 
 function beginFill() {
-  if (!state.running) return;
+  if (!canPlay()) return;
   const k = kettleData[state.selected];
   if (k.state === "heating") return toast("加熱中は給水できません", true);
   if (k.water >= 1.199) return toast("ケトルは満水です", true);
@@ -411,7 +447,7 @@ function endFill() {
 }
 
 function heatSelected() {
-  if (!state.running) return;
+  if (!canPlay()) return;
   endFill();
   const k = kettleData[state.selected];
   if (k.water <= 0) { breakChain(); feedback.play("error"); toast("空焚き！", true); updateUI(); return; }
@@ -421,7 +457,7 @@ function heatSelected() {
 }
 
 function returnWaterToKettle() {
-  if (!state.running) return;
+  if (!canPlay()) return;
   endFill();
   const k = kettleData[state.selected];
   const plan = planWaterReturn(state.potQueue, potData, kettleData.slice(0, state.activeKettles), state.selected);
@@ -437,7 +473,7 @@ function returnWaterToKettle() {
 }
 
 function serveSelected() {
-  if (!state.running) return;
+  if (!canPlay()) return;
   endFill();
   const k = kettleData[state.selected];
   const servingQueueIndex = findServingQueueIndex(state.potQueue, potData, state.selectedDripper);
@@ -469,6 +505,9 @@ function serveSelected() {
 }
 
 function resetGame() {
+  state.running = false;
+  closePauseOverlays();
+  last = performance.now();
   feedback.clear();
   feedback.unlockAudio();
   const difficulty = DIFFICULTIES[state.difficulty];
@@ -483,6 +522,7 @@ function resetGame() {
   applyConfiguration();
   $("#intro").classList.remove("show"); $("#result").classList.remove("show");
   ui.flowHud.hidden = false;
+  ui.pauseButton.hidden = false;
   const minutes = Math.floor(state.playDuration / 60), seconds = state.playDuration % 60;
   ui.timer.classList.remove("warning"); ui.timer.querySelector("strong").textContent = `${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
   clearTimeout(toastTimer); ui.toast.className = "toast";
@@ -495,6 +535,8 @@ function resetGame() {
 function endGame() {
   endFill();
   state.running = false;
+  closePauseOverlays();
+  ui.pauseButton.hidden = true;
   feedback.clear();
   feedback.stopMusic();
   ui.flowHud.hidden = true;
@@ -609,7 +651,7 @@ let uiElapsed = 0;
 function tick(now) {
   requestAnimationFrame(tick);
   const rawDt = Math.min(.05, (now - last) / 1000); last = now;
-  if (state.running) {
+  if (canPlay()) {
     const previousTime = state.time;
     state.flowEffect = Math.max(0, state.flowEffect - rawDt);
     state.time = Math.max(0, state.time - rawDt);
@@ -731,13 +773,16 @@ function tick(now) {
     uiElapsed += rawDt;
     if (uiElapsed >= .1) { updateUI(); uiElapsed = 0; }
   }
-  kettleData.forEach((k, i) => { k.group.position.y = 1.52 + Math.sin(now * .0012 + i) * .007; });
-  feedback.tick(rawDt);
+  if (!pause.paused) {
+    kettleData.forEach((k, i) => { k.group.position.y = 1.52 + Math.sin(now * .0012 + i) * .007; });
+    feedback.tick(rawDt);
+  }
   renderer.render(scene, camera);
 }
 
 const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
 canvas.addEventListener("pointerdown", (e) => {
+  if (!canPlay()) return;
   pointer.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
   const hit = raycaster.intersectObjects(clickable).find(item => item.object.userData.index < state.activeKettles);
@@ -745,7 +790,7 @@ canvas.addEventListener("pointerdown", (e) => {
 });
 
 let dragging = false, dragX = 0, cameraAngle = 0;
-canvas.addEventListener("pointerdown", e => { dragging = true; dragX = e.clientX; });
+canvas.addEventListener("pointerdown", e => { if (canPlay()) { dragging = true; dragX = e.clientX; } });
 addEventListener("pointerup", () => dragging = false);
 addEventListener("pointermove", e => {
   if (!dragging) return;
@@ -754,6 +799,13 @@ addEventListener("pointermove", e => {
 });
 
 addEventListener("keydown", e => {
+  if (!state.running || ui.keyDialog.open || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.("input, textarea, select, [contenteditable='true']")) return;
+  if (e.code === "Escape" && !ui.pauseDialog.open) {
+    e.preventDefault();
+    if (!e.repeat) pauseGame();
+    return;
+  }
+  if (pause.paused) return;
   const action = keyboardAction(e.code, state.activeKettles);
   if (!action || (e.repeat && action !== "fill")) return;
   e.preventDefault();
@@ -765,7 +817,7 @@ addEventListener("keydown", e => {
 });
 
 addEventListener("keyup", e => {
-  if (e.code === "KeyA") endFill();
+  if (keyboardAction(e.code, state.activeKettles) === "fill") endFill();
 });
 addEventListener("blur", endFill);
 
@@ -775,14 +827,29 @@ ui.fill.addEventListener("contextmenu", e => e.preventDefault());
 addEventListener("pointerup", endFill);
 ui.heat.onclick = heatSelected; ui.returnWater.onclick = returnWaterToKettle; ui.serve.onclick = serveSelected;
 $("#start-button").onclick = resetGame; $("#restart-button").onclick = resetGame;
-$("#change-settings-button").onclick = () => {
+function returnToSettings() {
   endFill();
   state.running = false;
+  closePauseOverlays();
   feedback.stopMusic();
+  feedback.clear();
+  ui.pauseButton.hidden = true;
+  ui.flowHud.hidden = true;
   $("#result").classList.remove("show");
   $("#intro").classList.add("show");
   updateSetupUI();
-};
+  $("#start-button").focus();
+}
+$("#change-settings-button").onclick = returnToSettings;
+ui.pauseButton.onclick = pauseGame;
+$("#resume-button").onclick = () => ui.pauseDialog.close();
+ui.pauseDialog.addEventListener("close", () => pause.resume("menu"));
+ui.pauseDialog.addEventListener("cancel", e => {
+  e.preventDefault();
+  ui.pauseDialog.close();
+});
+$("#pause-restart-button").onclick = resetGame;
+$("#pause-settings-button").onclick = returnToSettings;
 function syncSetup() {
   state.difficulty = selection.difficulty;
   state.timeSlot = selection.timeSlot;
@@ -794,6 +861,16 @@ function syncSetup() {
   selectKettle(0);
 }
 document.addEventListener("setup-change", syncSetup);
+document.addEventListener("keybindings-change", () => {
+  endFill();
+  updateKeyBindingLabels();
+});
+document.addEventListener("keybindings-open", () => {
+  pause.pause("keybindings");
+});
+document.addEventListener("keybindings-close", () => {
+  pause.resume("keybindings");
+});
 let musicEnabled = true;
 $("#music-toggle").onclick = e => {
   musicEnabled = !musicEnabled;
