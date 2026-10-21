@@ -1,3 +1,32 @@
+import { createMusic } from "./music.js";
+
+export function playShiftWhistle(context, destination) {
+  // A short referee-style double whistle, with soft attacks and a capped level.
+  for (const [offset, length] of [[.12, .13], [.35, .55]]) {
+    const at = context.currentTime + offset;
+    const envelope = context.createGain();
+    envelope.gain.setValueAtTime(0, at);
+    envelope.gain.linearRampToValueAtTime(.1, at + .015);
+    envelope.gain.setValueAtTime(.085, at + length * .65);
+    envelope.gain.exponentialRampToValueAtTime(.0001, at + length);
+    envelope.connect(destination);
+    let remaining = 2;
+    for (const frequency of [2180, 2795]) {
+      const oscillator = context.createOscillator();
+      oscillator.frequency.setValueAtTime(frequency, at);
+      oscillator.frequency.linearRampToValueAtTime(frequency + 28, at + .035);
+      oscillator.frequency.linearRampToValueAtTime(frequency - 12, at + length);
+      oscillator.connect(envelope);
+      oscillator.start(at);
+      oscillator.stop(at + length + .025);
+      oscillator.onended = () => {
+        oscillator.disconnect();
+        if (--remaining === 0) envelope.disconnect();
+      };
+    }
+  }
+}
+
 // Presentation only: feedback never changes water, heat, deadlines or achievement.
 export function serviceJudgment(stage, temperature, clearsBacklog) {
   if (clearsBacklog) return { title: "RECOVERY", detail: "滞りを解消。流れを取り戻した！", color: "#79d9ed", sound: "recovery" };
@@ -15,6 +44,9 @@ export function createFeedback({ THREE, scene, camera }) {
   let context;
   let master;
   let soundEnabled = true;
+  let musicEnabled = true;
+  let music;
+  const musicSession = { active: false, remaining: 0, duration: 120 };
   let zoom = 0;
   let lastSound = -Infinity;
   let resultFrame = 0;
@@ -23,19 +55,23 @@ export function createFeedback({ THREE, scene, camera }) {
   const patterns = {
     start: [392, 523, 784], serve: [523, 659, 784], perfect: [659, 831, 988, 1319],
     recovery: [392, 523, 659, 1047], milestone: [523, 659, 784, 1047, 1319],
-    ready: [784, 1047], recycle: [440, 659], order: [440], error: [196, 165], finish: [523, 659, 784, 1047]
+    ready: [784, 1047], recycle: [440, 659], order: [440], error: [196, 165]
   };
 
   function unlockAudio() {
-    if (!soundEnabled) return;
+    if (!soundEnabled && !musicEnabled) return;
     try {
       const Audio = window.AudioContext || window.webkitAudioContext;
       if (!Audio) return;
       if (!context) {
         context = new Audio();
         master = context.createGain();
-        master.gain.value = .2;
+        master.gain.value = soundEnabled ? .2 : 0;
         master.connect(context.destination);
+        music = createMusic(context);
+        music.setEnabled(musicEnabled);
+        music.setVisible(!document.hidden);
+        if (musicSession.active) music.start(musicSession.remaining, musicSession.duration);
       }
       context.resume().catch(() => {});
     } catch { /* Audio is optional; gameplay must still work. */ }
@@ -43,6 +79,10 @@ export function createFeedback({ THREE, scene, camera }) {
 
   function play(type, streak = 0) {
     if (!soundEnabled || !context || context.state !== "running") return;
+    if (type === "finish") {
+      playShiftWhistle(context, master);
+      return;
+    }
     // Coalesce kettles that finish together and simultaneous new-order pings.
     if ((type === "ready" || type === "order") && context.currentTime - lastSound < .24) return;
     lastSound = context.currentTime;
@@ -160,8 +200,34 @@ export function createFeedback({ THREE, scene, camera }) {
     streams.length = 0; zoom = 0;
   }
 
+  function stopMusic() {
+    musicSession.active = false;
+    music?.stop();
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    music?.setVisible(!document.hidden);
+    if (!document.hidden && musicSession.active) unlockAudio();
+  });
+  window.addEventListener("pagehide", stopMusic);
+
   return {
     unlockAudio, play, pulse, burst, announce, waterTrail, tick, countResult, clear,
+    startMusic(remaining, duration) {
+      unlockAudio();
+      Object.assign(musicSession, { active: true, remaining, duration });
+      music?.start(remaining, duration);
+    },
+    updateMusic(remaining, duration) {
+      Object.assign(musicSession, { remaining, duration });
+      if (musicSession.active) music?.update(remaining, duration);
+    },
+    stopMusic,
+    setMusic(enabled) {
+      musicEnabled = enabled;
+      if (enabled) unlockAudio();
+      music?.setEnabled(enabled);
+    },
     setSound(enabled) {
       soundEnabled = enabled;
       if (master && context) master.gain.setValueAtTime(enabled ? .2 : 0, context.currentTime);

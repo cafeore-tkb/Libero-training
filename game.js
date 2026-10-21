@@ -488,6 +488,7 @@ function resetGame() {
   clearTimeout(toastTimer); ui.toast.className = "toast";
   feedback.announce("LET’S FLOW", `${state.playDuration}秒間、店の流れを守れ。`, "#b7ee68");
   feedback.play("start");
+  feedback.startMusic(state.time, state.playDuration);
   selectKettle(0); updateUI();
 }
 
@@ -495,6 +496,7 @@ function endGame() {
   endFill();
   state.running = false;
   feedback.clear();
+  feedback.stopMusic();
   ui.flowHud.hidden = true;
   const evaluation = evaluateService(state.serviceCounts, state.orders);
   state.achievement = evaluation.percentage;
@@ -611,6 +613,7 @@ function tick(now) {
     const previousTime = state.time;
     state.flowEffect = Math.max(0, state.flowEffect - rawDt);
     state.time = Math.max(0, state.time - rawDt);
+    feedback.updateMusic(state.time, state.playDuration);
     if (previousTime > 10 && state.time <= 10) {
       feedback.announce("LAST 10 SECONDS", "最後まで、流れをつなげ。", "#ffbc76");
       feedback.play("start");
@@ -775,6 +778,7 @@ $("#start-button").onclick = resetGame; $("#restart-button").onclick = resetGame
 $("#change-settings-button").onclick = () => {
   endFill();
   state.running = false;
+  feedback.stopMusic();
   $("#result").classList.remove("show");
   $("#intro").classList.add("show");
   updateSetupUI();
@@ -790,6 +794,14 @@ function syncSetup() {
   selectKettle(0);
 }
 document.addEventListener("setup-change", syncSetup);
+let musicEnabled = true;
+$("#music-toggle").onclick = e => {
+  musicEnabled = !musicEnabled;
+  feedback.setMusic(musicEnabled);
+  e.currentTarget.classList.toggle("muted", !musicEnabled);
+  e.currentTarget.setAttribute("aria-pressed", String(musicEnabled));
+  e.currentTarget.title = `BGM ${musicEnabled ? "ON" : "OFF"}`;
+};
 $("#sound-toggle").onclick = (e) => {
   state.sound = !state.sound;
   feedback.setSound(state.sound);
