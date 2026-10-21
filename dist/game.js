@@ -190,20 +190,27 @@ function makeCoffeePot(index, x) {
   baseSeam.rotation.x = Math.PI / 2; baseSeam.position.y = .1; group.add(baseSeam);
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(.405, .405, .065, 40), steel);
   neck.position.y = 1.175; neck.castShadow = true; group.add(neck);
-  const topRim = new THREE.Mesh(new THREE.TorusGeometry(.41, .022, 8, 40), polishedSteel);
-  topRim.rotation.x = Math.PI / 2; topRim.position.y = 1.21; group.add(topRim);
+  const topRim = new THREE.Mesh(new THREE.TorusGeometry(.408, .012, 8, 40), polishedSteel);
+  topRim.rotation.x = Math.PI / 2; topRim.position.y = 1.2075; group.add(topRim);
 
-  // 薄い落とし蓋と、低く丸いステンレスつまみ。
-  const lidFlange = new THREE.Mesh(new THREE.CylinderGeometry(.445, .445, .035, 40), polishedSteel);
-  lidFlange.position.y = 1.225; lidFlange.castShadow = true; group.add(lidFlange);
-  const lidDome = new THREE.Mesh(new THREE.SphereGeometry(.385, 40, 12, 0, Math.PI * 2, 0, Math.PI / 2), polishedSteel);
-  lidDome.scale.y = .3; lidDome.position.y = 1.24; lidDome.castShadow = true; group.add(lidDome);
-  const knobStem = new THREE.Mesh(new THREE.CylinderGeometry(.06, .075, .055, 18), polishedSteel);
-  knobStem.position.y = 1.36; group.add(knobStem);
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(.105, 24, 12), polishedSteel);
-  knob.scale.y = .58; knob.position.y = 1.415; knob.castShadow = true; group.add(knob);
-  const vent = new THREE.Mesh(new THREE.SphereGeometry(.022, 10, 8), ventDark);
-  vent.position.set(.205, 1.285, .12); group.add(vent);
+  // 鍋蓋のように内側の差し込み部で位置が決まり、外縁が口の縁へ密着する低い一体蓋。
+  // 球面と円盤を重ねず、差し込み部〜折り返し縁〜浅い天面を連続した断面にする。
+  const lidProfile = [
+    new THREE.Vector2(0, -.028), new THREE.Vector2(.386, -.028),
+    new THREE.Vector2(.396, -.016), new THREE.Vector2(.396, 0),
+    new THREE.Vector2(.418, 0), new THREE.Vector2(.425, .007),
+    new THREE.Vector2(.425, .015), new THREE.Vector2(.417, .023),
+    new THREE.Vector2(.36, .038), new THREE.Vector2(.25, .05),
+    new THREE.Vector2(.11, .057), new THREE.Vector2(0, .058)
+  ];
+  const lid = new THREE.Mesh(new THREE.LatheGeometry(lidProfile, 40), polishedSteel);
+  lid.position.y = 1.209; lid.castShadow = true; lid.receiveShadow = true; group.add(lid);
+  const knobStem = new THREE.Mesh(new THREE.CylinderGeometry(.055, .075, .045, 18), polishedSteel);
+  knobStem.position.y = 1.286; group.add(knobStem);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(.095, 24, 12), polishedSteel);
+  knob.scale.y = .5; knob.position.y = 1.332; knob.castShadow = true; group.add(knob);
+  const vent = new THREE.Mesh(new THREE.SphereGeometry(.014, 12, 8), ventDark);
+  vent.scale.y = .22; vent.position.set(.205, 1.261, .12); group.add(vent);
 
   // 胴のかなり低い位置から長く立ち上がる、雫の象徴的な約7mm相当の極細口。
   const spoutCollar = new THREE.Mesh(new THREE.CylinderGeometry(.067, .12, .16, 20), polishedSteel);
