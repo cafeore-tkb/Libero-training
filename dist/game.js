@@ -4,12 +4,13 @@ import { createServiceCounts, orderStageKey, evaluateService, achievementLabel, 
 import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
 import { selection, updateSetupUI } from "./setup.js";
 import { planWaterReturn, transferReturnedWater } from "./water-return.js";
-import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE } from "./timing.js";
+import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE, frameDeltaSeconds } from "./timing.js?rev=nonnegative-clock-1";
 import { SERVING_TARGET, findServingQueueIndex, pourAvailableWater } from "./serving.js";
 import { arrangePotQueue, potQueueLayout, POT_QUEUE_POSITIONS } from "./pot-queue.js";
 import { keyboardAction, neighboringKettleIndex } from "./keybindings.js";
 import { updateKeyBindingLabels } from "./keybindings-ui.js";
 import { createPauseController } from "./pause.js";
+import { emptyCoffeePotState, advancePotLifecycle } from "./pot-lifecycle.js?rev=nonnegative-clock-1";
 
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -249,7 +250,7 @@ function makeCoffeePot(index, x) {
   requestRing.rotation.x = -Math.PI / 2; requestRing.position.y = .015; group.add(requestRing);
 
   scene.add(group);
-  potData.push({ index, group, liquid, requestRing, water: 0, temp: 22, waterLevel: 0, flash: 0, returnAnim: 0, busyTime: 0, assignedDripper: null });
+  potData.push({ index, group, liquid, requestRing, ...emptyCoffeePotState() });
 }
 
 POT_QUEUE_POSITIONS.forEach(([x, z], i) => { makeCoffeePot(i, x); potData[i].group.position.z = z; });
@@ -507,6 +508,7 @@ function serveSelected() {
   state.served++;
   serviceCelebration(order, pot.temp);
   pot.busyTime = POT_BUSY_TIME; pot.presentationTime = POT_PRESENTATION_TIME;
+  pot.returnPending = true;
   state.potQueue.splice(servingQueueIndex, 1);
   updateUI();
 }
@@ -524,8 +526,11 @@ function resetGame() {
     k.group.rotation.x = 0;
   });
   potData.forEach((pot, i) => {
-    Object.assign(pot, { water: 0, temp: 22, waterLevel: 0, flash: 0, returnAnim: 0, busyTime: 0, presentationTime: 0, assignedDripper: null });
-    pot.group.visible = true; pot.group.rotation.z = 0; pot.liquid.visible = false;
+    Object.assign(pot, emptyCoffeePotState());
+    pot.group.visible = true; pot.group.rotation.set(0, 0, 0); pot.liquid.visible = false;
+    pot.liquid.scale.y = .02; pot.liquid.position.y = .4;
+    pot.requestRing.material.color.setHex(i === 0 ? 0xa7d46f : 0xff9b56);
+    pot.requestRing.material.opacity = i === 0 ? .95 : .12;
     pot.group.position.set(POT_QUEUE_POSITIONS[i][0], 1.47, POT_QUEUE_POSITIONS[i][1]);
   });
   ui.orders.replaceChildren();
@@ -655,7 +660,7 @@ function updateUI() {
     : servingPot?.assignedDripper === state.selectedDripper
       ? `SERVE: D${String(state.selectedDripper + 1).padStart(2,"0")} / ${Math.round(servingPot.water * 1000)} → 900ml`
       : servingPot ? `SERVE: 空ポット → D${String(state.selectedDripper + 1).padStart(2,"0")} / 900ml` : "注湯できるポットなし — 戻り湯を回収してください";
-  ui.returnHint.textContent = `RETURN: ${returnPlan.reason}`;
+  ui.returnHint.textContent = returnPlan.queueIndex < 0 ? "RETURN: 戻り湯なし（0ml）" : `RETURN: ${returnPlan.reason}`;
   ui.returnWater.title = returnPlan.reason;
   ui.fill.disabled = k.state === "heating" || k.water >= 1.199;
   ui.fill.style.setProperty("--fill-level", `${Math.min(100, k.water / 1.2 * 100)}%`);
@@ -671,7 +676,7 @@ let last = performance.now();
 let uiElapsed = 0;
 function tick(now) {
   requestAnimationFrame(tick);
-  const rawDt = Math.min(.05, (now - last) / 1000); last = now;
+  const rawDt = frameDeltaSeconds(now, last); last = now;
   if (canPlay()) {
     const previousTime = state.time;
     state.flowEffect = Math.max(0, state.flowEffect - rawDt);
@@ -749,19 +754,9 @@ function tick(now) {
       k.group.rotation.x = -Math.sin(k.pourAnim * Math.PI) * .32;
     });
     potData.forEach(pot => {
-      pot.flash = Math.max(0, pot.flash - rawDt * .8);
-      pot.presentationTime = Math.max(0, (pot.presentationTime || 0) - rawDt);
-      const wasBusy = pot.busyTime > 0;
-      pot.busyTime = Math.max(0, pot.busyTime - rawDt);
-      if (wasBusy && pot.busyTime <= 0) {
-        pot.assignedDripper = null;
-        pot.water = Math.round((.4 + Math.random() * .1) * 100) / 100;
-        pot.temp = Math.max(22, pot.temp - (6 + Math.random() * 4));
-        pot.flash = 1;
+      if (advancePotLifecycle(pot, rawDt)) {
         if (!state.potQueue.includes(pot.index)) state.potQueue.push(pot.index);
         arrangePotQueue(state.potQueue, potData);
-      } else if (!wasBusy && pot.water > 0) {
-        pot.temp = Math.max(22, pot.temp - .18 * rawDt);
       }
     });
     const potPositions = potQueueLayout(state.potQueue, potData);

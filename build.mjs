@@ -12,6 +12,7 @@ await Promise.all([
   cp("water-return.js", "dist/water-return.js"),
   cp("serving.js", "dist/serving.js"),
   cp("pot-queue.js", "dist/pot-queue.js"),
+  cp("pot-lifecycle.js", "dist/pot-lifecycle.js"),
   cp("timing.js", "dist/timing.js"),
   cp("keybindings.js", "dist/keybindings.js"),
   cp("keybindings-ui.js", "dist/keybindings-ui.js"),

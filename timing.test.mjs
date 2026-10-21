@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { FILL_RATE, HEAT_POWER, OPERATION_SPEED_SCALE, POT_BUSY_TIME } from "./timing.js";
+import { FILL_RATE, HEAT_POWER, OPERATION_SPEED_SCALE, POT_BUSY_TIME, frameDeltaSeconds } from "./timing.js";
 
 test("filling, heating and pot return each run at 1.15x speed", () => {
   const fillSpeedRatio = FILL_RATE / .25;
@@ -11,4 +11,11 @@ test("filling, heating and pot return each run at 1.15x speed", () => {
   assert.ok(Math.abs(fillSpeedRatio - OPERATION_SPEED_SCALE) < 1e-12);
   assert.ok(Math.abs(heatSpeedRatio - OPERATION_SPEED_SCALE) < 1e-12);
   assert.ok(Math.abs(returnSpeedRatio - OPERATION_SPEED_SCALE) < 1e-12);
+});
+
+test("a frame timestamp preceding start or resume never produces negative time", () => {
+  assert.equal(frameDeltaSeconds(1000, 1001.7), 0);
+  assert.equal(frameDeltaSeconds(1000, 1000), 0);
+  assert.equal(frameDeltaSeconds(1016, 1000), .016);
+  assert.equal(frameDeltaSeconds(10000, 1000), .05);
 });
