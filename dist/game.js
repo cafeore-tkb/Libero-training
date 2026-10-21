@@ -5,7 +5,7 @@ import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
 import { selection, updateSetupUI } from "./setup.js";
 import { planWaterReturn, transferReturnedWater } from "./water-return.js";
 import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE, frameDeltaSeconds } from "./timing.js?rev=nonnegative-clock-1";
-import { SERVING_TARGET, findServingQueueIndex, pourAvailableWater } from "./serving.js";
+import { SERVING_TARGET, findServingQueueIndex, pourAvailableWater, mostUrgentOrder } from "./serving.js?rev=urgent-target-1";
 import { arrangePotQueue, potQueueLayout, POT_QUEUE_POSITIONS } from "./pot-queue.js";
 import { keyboardAction, neighboringKettleIndex } from "./keybindings.js";
 import { updateKeyBindingLabels } from "./keybindings-ui.js";
@@ -381,7 +381,7 @@ function applyConfiguration() {
   [...ui.tabs.children].forEach((tab, index) => { tab.hidden = index >= state.activeKettles; });
   ui.tabs.style.gridTemplateColumns = `repeat(${state.activeKettles}, 1fr)`;
   ui.orders.style.setProperty("--drippers", state.activeDrippers);
-  ui.dripperLabel.textContent = `${state.activeDrippers} DRIPPERS`;
+  ui.dripperLabel.textContent = `${state.activeDrippers} DRIPPERS · AUTO`;
   ui.kettleShortcuts.dataset.count = String(state.activeKettles);
   updateKeyBindingLabels();
   ui.shiftStatus.innerHTML = `<span class="live-dot"></span>${difficulty.label} / ${slot.label} / ${state.playDuration}秒`;
@@ -404,11 +404,10 @@ function selectKettle(index) {
   updateUI();
 }
 
-function selectDripper(index) {
-  if (pause.paused) return;
-  if (index < 0 || index >= state.activeDrippers) return;
-  state.selectedDripper = index;
-  updateUI();
+function syncServingTarget() {
+  const order = mostUrgentOrder(state.orders);
+  state.selectedDripper = order?.dripper ?? 0;
+  return order;
 }
 
 let toastTimer;
@@ -428,7 +427,7 @@ function addOrder() {
   const stageDurations = slot.orderStages.map(seconds => seconds * variance);
   const max = stageDurations.reduce((total, seconds) => total + seconds, 0);
   state.orders.push({ id: state.orderId++, dripper, time: max, max, stageDurations, overdue: false });
-  if (state.orders.length === 1) state.selectedDripper = dripper;
+  syncServingTarget();
   feedback.play("order");
 }
 
@@ -483,13 +482,14 @@ function returnWaterToKettle() {
 function serveSelected() {
   if (!canPlay()) return;
   endFill();
+  const targetOrder = syncServingTarget();
+  if (!targetOrder) return toast("注文待ちです", true);
   const k = kettleData[state.selected];
   const servingQueueIndex = findServingQueueIndex(state.potQueue, potData, state.selectedDripper);
   if (servingQueueIndex < 0) return toast("注湯できるポットがありません", true);
   const potIndex = state.potQueue[servingQueueIndex];
   const pot = potData[potIndex];
-  const orderIndex = state.orders.findIndex(order => order.dripper === state.selectedDripper);
-  if (orderIndex < 0) return toast(`DRIPPER 0${state.selectedDripper + 1} は待機中です`, true);
+  const orderIndex = state.orders.indexOf(targetOrder);
   if (k.water <= 0) return toast("ケトルが空です", true);
   if (k.temp < 92) { breakChain(); feedback.play("error"); toast(`${Math.round(k.temp)}°C — まだぬるい！`, true); updateUI(); return; }
   feedback.waterTrail(k, pot);
@@ -587,17 +587,15 @@ function renderOrders() {
     const order = state.orders.find(item => item.dripper === dripperIndex);
     let element = ui.orders.querySelector(`[data-dripper-index="${dripperIndex}"]`);
     if (!element) {
-      element = document.createElement("button");
-      element.type = "button";
+      element = document.createElement("div");
       element.className = "order";
       element.dataset.dripperIndex = dripperIndex;
       element.innerHTML = `<span class="order-no">D${String(dripperIndex + 1).padStart(2,"0")}</span><span class="order-copy"><b>DRIPPER ${String(dripperIndex + 1).padStart(2,"0")}</b><small></small></span><span class="order-time"></span>`;
-      element.onclick = () => selectDripper(dripperIndex);
       ui.orders.append(element);
     }
     const life = order ? Math.max(0, order.time / order.max * 100) : 0;
     const stage = getOrderStage(order);
-    element.classList.toggle("active", state.selectedDripper === dripperIndex);
+    element.classList.toggle("active", Boolean(order) && state.selectedDripper === dripperIndex);
     element.classList.toggle("idle", !order);
     ORDER_STAGES.forEach(item => element.classList.toggle(item.key, stage?.key === item.key));
     element.style.setProperty("--life", `${life}%`);
@@ -608,6 +606,7 @@ function renderOrders() {
 }
 
 function updateUI() {
+  const selectedOrder = syncServingTarget();
   const k = kettleData[state.selected];
   const evaluation = evaluateService(state.serviceCounts, state.orders);
   state.achievement = evaluation.percentage;
@@ -637,7 +636,6 @@ function updateUI() {
   const labels = { empty: "空 — 給水してください", filled: "待機中 — 加熱できます", heating: "加熱中 — 温度上昇", ready: "準備完了 — 提供できます" };
   ui.state.textContent = labels[k.state];
   [...ui.tabs.children].forEach((tab, i) => { tab.classList.toggle("active", i === state.selected); tab.classList.toggle("hot", kettleData[i].temp >= 92); });
-  const selectedOrder = state.orders.some(order => order.dripper === state.selectedDripper);
   const servingQueueIndex = findServingQueueIndex(state.potQueue, potData, state.selectedDripper);
   const returnPlan = planWaterReturn(state.potQueue, potData, kettleData.slice(0, state.activeKettles), state.selected);
   [...ui.potQueue.children].forEach((slot, queueIndex) => {
@@ -655,11 +653,12 @@ function updateUI() {
   const servingPot = servingQueueIndex < 0 ? null : potData[state.potQueue[servingQueueIndex]];
   const emptyCount = state.potQueue.filter(index => potData[index].water <= 0).length;
   ui.availablePots.textContent = `${emptyCount} READY`;
-  ui.target.textContent = !state.potQueue.length
+  ui.target.textContent = !selectedOrder ? "AUTO: 注文待ち"
+    : !state.potQueue.length
     ? "QUEUE EMPTY — 全ポット使用中"
     : servingPot?.assignedDripper === state.selectedDripper
-      ? `SERVE: D${String(state.selectedDripper + 1).padStart(2,"0")} / ${Math.round(servingPot.water * 1000)} → 900ml`
-      : servingPot ? `SERVE: 空ポット → D${String(state.selectedDripper + 1).padStart(2,"0")} / 900ml` : "注湯できるポットなし — 戻り湯を回収してください";
+      ? `AUTO: D${String(state.selectedDripper + 1).padStart(2,"0")} / ${Math.round(servingPot.water * 1000)} → 900ml`
+      : servingPot ? `AUTO: 空ポット → D${String(state.selectedDripper + 1).padStart(2,"0")} / 900ml` : "注湯できるポットなし — 戻り湯を回収してください";
   ui.returnHint.textContent = returnPlan.queueIndex < 0 ? "RETURN: 戻り湯なし（0ml）" : `RETURN: ${returnPlan.reason}`;
   ui.returnWater.title = returnPlan.reason;
   ui.fill.disabled = k.state === "heating" || k.water >= 1.199;
@@ -699,6 +698,7 @@ function tick(now) {
       order.time = Math.max(0, order.time - rawDt);
       if (order.time <= 0) { order.overdue = true; newlyOverdue++; }
     });
+    syncServingTarget();
     if (newlyOverdue) {
       breakChain();
       feedback.play("error");

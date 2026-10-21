@@ -2,6 +2,15 @@ export const SERVING_TARGET = .9;
 const EPSILON = 1e-9;
 const roundLiters = value => Math.round(value * 1e6) / 1e6;
 
+export function mostUrgentOrder(orders) {
+  return orders.reduce((first, order) => {
+    if (!first) return order;
+    const remaining = order.overdue ? 0 : Math.max(0, order.time);
+    const firstRemaining = first.overdue ? 0 : Math.max(0, first.time);
+    return remaining < firstRemaining || (remaining === firstRemaining && order.id < first.id) ? order : first;
+  }, null);
+}
+
 export function findServingQueueIndex(queue, pots, dripper) {
   const partialIndex = queue.findIndex(index => {
     const pot = pots[index];

@@ -8,7 +8,7 @@ const retry = document.querySelector("#reload-button");
 retry.addEventListener("click", () => location.reload());
 
 try {
-  await import("./game.js?rev=empty-pots-3");
+  await import("./game.js?rev=urgent-target-1");
   startButton.disabled = false;
   status.hidden = true;
 } catch (error) {
