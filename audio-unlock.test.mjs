@@ -12,7 +12,9 @@ function harness() {
   let allowed = false;
   class Audio {
     constructor() { this.state = "suspended"; this.currentTime = 0; this.destination = {}; this.resumes = 0; contexts.push(this); }
-    createGain() { this.master = { gain: { value: 0, setValueAtTime(value) { this.value = value; } }, connect() {} }; return this.master; }
+    createGain() { this.master = { gain: { value: 0, setValueAtTime(value) { this.value = value; }, linearRampToValueAtTime() {} }, connect() {}, disconnect() {} }; return this.master; }
+    createOscillator() { return { frequency: {}, connect() {}, disconnect() {}, start() {}, stop() {} }; }
+    close() { this.state = "closed"; return Promise.resolve(); }
     resume() {
       this.resumes++;
       if (!allowed) return Promise.reject(new Error("autoplay blocked"));
@@ -25,7 +27,7 @@ function harness() {
   const feedback = createFeedback({ THREE: {}, scene: {}, camera: {}, musicFactory() {
     const music = { starts: 0, stops: 0, active: false, enabled: true, visible: true,
       start() { this.starts++; this.active = true; }, stop() { this.stops++; this.active = false; },
-      update() {}, setEnabled(value) { this.enabled = value; }, setVisible(value) { this.visible = value; }
+      update() {}, setEnabled(value) { this.enabled = value; }, setVisible(value) { this.visible = value; }, setVolume(value) { this.volume = value; }
     };
     musicInstances.push(music);
     return music;
@@ -102,5 +104,42 @@ test("a closed audio device is recreated on input using the current music sessio
     assert.equal(h.contexts[1].state, "running");
     assert.equal(h.musicInstances[0].stops, 1);
     assert.equal(h.musicInstances[1].starts, 1);
+  } finally { h.restore(); }
+});
+
+test("explicit reconnection replaces the device without losing the shift, mute, or volume", () => {
+  const h = harness();
+  try {
+    h.allow(); h.feedback.startMusic(90, 120); h.feedback.setSound(false); h.feedback.setVolume(.4);
+    h.feedback.reconnectAudio();
+    assert.equal(h.contexts[0].state, "closed");
+    assert.equal(h.contexts[1].state, "running");
+    assert.equal(h.contexts[1].master.gain.value, 0);
+    assert.equal(h.musicInstances[1].starts, 1);
+    assert.equal(h.musicInstances[1].volume, .4);
+    assert.equal(h.feedback.audioStatus().soundEnabled, false);
+  } finally { h.restore(); }
+});
+
+test("explicit test bypasses mute without changing it or starting background music", async () => {
+  const h = harness();
+  try {
+    h.allow(); h.feedback.setSound(false); h.feedback.setMusic(false);
+    assert.equal(await h.feedback.testAudio(), true);
+    assert.equal(h.musicInstances[0].starts, 0);
+    assert.equal(h.musicInstances[0].enabled, false);
+    assert.equal(h.feedback.audioStatus().soundEnabled, false);
+  } finally { h.restore(); }
+});
+
+test("blocked audio exposes a useful error, and a successful gesture clears it", async () => {
+  const h = harness();
+  try {
+    assert.equal(await h.feedback.testAudio(), false);
+    assert.match(h.feedback.audioStatus().error, /テスト音を開始できません/);
+    h.allow(); h.doc.dispatchEvent(new Event("pointerdown"));
+    await Promise.resolve();
+    assert.equal(h.feedback.audioStatus().state, "running");
+    assert.equal(h.feedback.audioStatus().error, "");
   } finally { h.restore(); }
 });

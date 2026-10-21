@@ -8,6 +8,7 @@ await Promise.all([
   cp("game.js", "dist/game.js"),
   cp("feedback.js", "dist/feedback.js"),
   cp("music.js", "dist/music.js"),
+  cp("audio-ui.js", "dist/audio-ui.js"),
   cp("evaluation.js", "dist/evaluation.js"),
   cp("water-return.js", "dist/water-return.js"),
   cp("serving.js", "dist/serving.js"),

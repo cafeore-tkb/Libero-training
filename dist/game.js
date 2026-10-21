@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { createFeedback, serviceJudgment } from "./feedback.js?rev=audio-gesture-1";
+import { createFeedback, serviceJudgment } from "./feedback.js?rev=audio-check-2";
+import { bindAudioUI } from "./audio-ui.js?rev=audio-check-2";
 import { createServiceCounts, orderStageKey, evaluateService, achievementLabel, achievementValue, serviceRank } from "./evaluation.js";
 import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
 import { selection, updateSetupUI } from "./setup.js";
@@ -289,7 +290,7 @@ const ui = {
   fill: $("#fill-button"), heat: $("#heat-button"), returnWater: $("#return-button"), serve: $("#serve-button"), toast: $("#toast"),
   shiftStatus: $("#shift-status"), dripperLabel: $("#dripper-label"), kettleShortcuts: $("#kettle-shortcuts"), setupLead: $("#setup-lead"),
   difficultySummary: $("#difficulty-summary"), timeSummary: $("#time-summary"), resultMode: $("#result-mode"),
-  keyDialog: $("#keybindings-dialog"),
+  keyDialog: $("#keybindings-dialog"), audioDialog: $("#audio-dialog"),
   pauseDialog: $("#pause-dialog"), pauseButton: $("#pause-button"),
   flowHud: $("#flow-hud"), flowLabel: $("#flow-label"), flowBar: $("#flow-bar"), flowHint: $("#flow-hint"), servedVolume: $("#served-volume")
 };
@@ -307,9 +308,12 @@ const pause = createPauseController({
   }
 });
 const canPlay = () => state.running && !pause.paused;
+bindAudioUI(feedback);
+document.addEventListener("audio-settings-open", () => pause.pause("audio"));
+document.addEventListener("audio-settings-close", () => pause.resume("audio"));
 
 function pauseGame() {
-  if (!state.running || ui.keyDialog.open || ui.pauseDialog.open) return;
+  if (!state.running || ui.keyDialog.open || ui.audioDialog.open || ui.pauseDialog.open) return;
   pause.pause("menu");
   const seconds = Math.ceil(state.time);
   $("#pause-time").textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
@@ -320,6 +324,7 @@ function pauseGame() {
 function closePauseOverlays() {
   pause.clear();
   ui.keyDialog.close();
+  ui.audioDialog.close();
   ui.pauseDialog.close();
 }
 
@@ -815,7 +820,7 @@ addEventListener("pointermove", e => {
 });
 
 addEventListener("keydown", e => {
-  if (!state.running || ui.keyDialog.open || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.("input, textarea, select, [contenteditable='true']")) return;
+  if (!state.running || ui.keyDialog.open || ui.audioDialog.open || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.("input, textarea, select, [contenteditable='true']")) return;
   if (e.code === "Escape" && !ui.pauseDialog.open) {
     e.preventDefault();
     if (!e.repeat) pauseGame();
@@ -896,6 +901,7 @@ $("#music-toggle").onclick = e => {
   e.currentTarget.classList.toggle("muted", !musicEnabled);
   e.currentTarget.setAttribute("aria-pressed", String(musicEnabled));
   e.currentTarget.title = `BGM ${musicEnabled ? "ON" : "OFF"}`;
+  e.currentTarget.setAttribute("aria-label", `BGM ${musicEnabled ? "ON：クリックでOFF" : "OFF：クリックでON"}`);
 };
 $("#sound-toggle").onclick = (e) => {
   state.sound = !state.sound;

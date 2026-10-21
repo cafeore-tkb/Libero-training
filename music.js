@@ -35,6 +35,7 @@ export function createMusic(context, { setTimer = setInterval, clearTimer = clea
   let enabled = true;
   let visible = true;
   let active = false;
+  let volume = 1;
   let timer = null;
   let remaining = 0;
   let duration = 120;
@@ -134,7 +135,7 @@ export function createMusic(context, { setTimer = setInterval, clearTimer = clea
     if (!active || !enabled || !visible || timer !== null) return;
     nextStep = context.currentTime + .04;
     output.gain.cancelScheduledValues(context.currentTime);
-    output.gain.setTargetAtTime(.12, context.currentTime, .06);
+    output.gain.setTargetAtTime(.12 * volume, context.currentTime, .06);
     timer = setTimer(schedule, 50);
     schedule();
   }
@@ -157,6 +158,11 @@ export function createMusic(context, { setTimer = setInterval, clearTimer = clea
     },
     update,
     stop() { active = false; hush(); },
+    setVolume(value) {
+      if (!Number.isFinite(value)) return;
+      volume = clamp(value, 0, 1);
+      if (timer !== null) output.gain.setTargetAtTime(.12 * volume, context.currentTime, .03);
+    },
     setEnabled(value) { enabled = value; if (value) resume(); else hush(); },
     setVisible(value) { visible = value; if (value) resume(); else hush(); }
   };

@@ -1,4 +1,4 @@
-import { createMusic } from "./music.js?rev=audio-gesture-1";
+import { createMusic } from "./music.js?rev=audio-check-2";
 
 export function playShiftWhistle(context, destination) {
   // A short referee-style double whistle, with soft attacks and a capped level.
@@ -45,6 +45,8 @@ export function createFeedback({ THREE, scene, camera, musicFactory = createMusi
   let master;
   let soundEnabled = true;
   let musicEnabled = true;
+  let volume = 1;
+  let audioError = "";
   let music;
   const musicSession = { active: false, remaining: 0, duration: 120 };
   let zoom = 0;
@@ -58,24 +60,75 @@ export function createFeedback({ THREE, scene, camera, musicFactory = createMusi
     ready: [784, 1047], recycle: [440, 659], order: [440], error: [196, 165]
   };
 
-  function unlockAudio() {
-    if (!soundEnabled && !musicEnabled) return;
+  function ensureAudio() {
     try {
       const Audio = window.AudioContext || window.webkitAudioContext;
-      if (!Audio) return;
+      if (!Audio) { audioError = "このブラウザーはゲーム音声に対応していません。"; return; }
       if (!context || context.state === "closed") {
         try { music?.stop(); } catch { /* A closed device may no longer accept automation. */ }
         context = new Audio();
         master = context.createGain();
-        master.gain.value = soundEnabled ? .2 : 0;
+        master.gain.value = soundEnabled ? .2 * volume : 0;
         master.connect(context.destination);
         music = musicFactory(context);
+        music.setVolume?.(volume);
         music.setEnabled(musicEnabled);
         music.setVisible(!document.hidden);
         if (musicSession.active) music.start(musicSession.remaining, musicSession.duration);
       }
-      if (context.state !== "running") context.resume().catch(() => {});
-    } catch { /* Audio is optional; gameplay must still work. */ }
+      return context;
+    } catch (error) { audioError = `音声の初期化に失敗しました（${error.name || "Error"}）。`; }
+  }
+
+  function unlockAudio() {
+    if (!soundEnabled && !musicEnabled) return;
+    const device = ensureAudio();
+    if (!device) return;
+    if (device.state === "running") { audioError = ""; return; }
+    try {
+      device.resume().then(() => {
+        if (context === device && device.state === "running") audioError = "";
+      }).catch(error => {
+        if (context === device) audioError = `音声を開始できません（${error.name || "Error"}）。再接続を押してください。`;
+      });
+    } catch (error) { audioError = `音声を開始できません（${error.name || "Error"}）。`; }
+  }
+
+  function reconnectAudio() {
+    const previous = context;
+    try { music?.stop(); } catch { /* Discard a disconnected device. */ }
+    context = undefined; music = undefined; master = undefined; audioError = "";
+    // Recreate synchronously in the user's click, not after awaiting close().
+    try { previous?.close?.().catch(() => {}); } catch { /* Already closed. */ }
+    ensureAudio();
+    unlockAudio();
+  }
+
+  async function testAudio() {
+    const device = ensureAudio();
+    if (!device) return false;
+    try {
+      // Explicit testing is independent of the BGM / SFX mute switches.
+      if (device.state !== "running") await device.resume();
+      if (device !== context || device.state !== "running") return false;
+      audioError = "";
+      [440, 660].forEach((frequency, index) => {
+        const oscillator = device.createOscillator();
+        const envelope = device.createGain();
+        const at = device.currentTime + .03 + index * .26;
+        oscillator.frequency.value = frequency;
+        envelope.gain.setValueAtTime(0, at);
+        envelope.gain.linearRampToValueAtTime(.18 * volume, at + .02);
+        envelope.gain.linearRampToValueAtTime(0, at + .22);
+        oscillator.connect(envelope); envelope.connect(device.destination);
+        oscillator.start(at); oscillator.stop(at + .24);
+        oscillator.onended = () => { oscillator.disconnect(); envelope.disconnect(); };
+      });
+      return true;
+    } catch (error) {
+      audioError = `テスト音を開始できません（${error.name || "Error"}）。`;
+      return false;
+    }
   }
 
   function play(type, streak = 0) {
@@ -223,7 +276,17 @@ export function createFeedback({ THREE, scene, camera, musicFactory = createMusi
   });
 
   return {
-    unlockAudio, play, pulse, burst, announce, waterTrail, tick, countResult, clear,
+    unlockAudio, reconnectAudio, testAudio, play, pulse, burst, announce, waterTrail, tick, countResult, clear,
+    audioStatus() {
+      return { state: context?.state || "uninitialized", supported: !!(window.AudioContext || window.webkitAudioContext),
+        error: audioError, musicEnabled, soundEnabled, volume };
+    },
+    setVolume(value) {
+      if (!Number.isFinite(value)) return;
+      volume = Math.min(1, Math.max(0, value));
+      if (master && context) master.gain.setValueAtTime(soundEnabled ? .2 * volume : 0, context.currentTime);
+      music?.setVolume?.(volume);
+    },
     startMusic(remaining, duration) {
       unlockAudio();
       Object.assign(musicSession, { active: true, remaining, duration });
@@ -241,7 +304,7 @@ export function createFeedback({ THREE, scene, camera, musicFactory = createMusi
     },
     setSound(enabled) {
       soundEnabled = enabled;
-      if (master && context) master.gain.setValueAtTime(enabled ? .2 : 0, context.currentTime);
+      if (master && context) master.gain.setValueAtTime(enabled ? .2 * volume : 0, context.currentTime);
       if (enabled) unlockAudio();
     },
     setEffects(enabled) { effectsEnabled = enabled; if (!enabled) clear(); }

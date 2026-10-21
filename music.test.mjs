@@ -21,7 +21,7 @@ function audioHarness() {
   const timers = new Set();
   const starts = [];
   const gains = [];
-  const parameter = () => ({ value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime() {}, cancelScheduledValues() {} });
+  const parameter = () => ({ value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime(value) { this.value = value; }, cancelScheduledValues() {} });
   const node = () => ({ connect() {}, disconnect() {} });
   const source = () => ({ ...node(), frequency: parameter(), start(at) { starts.push(at); }, stop() {} });
   const context = {
@@ -89,5 +89,22 @@ test("autoplay-suspended audio waits for permission without losing its scheduler
   h.tick();
   assert.ok(h.starts.length > 0);
   assert.ok(h.starts.every(at => at >= 3));
+  h.music.stop();
+});
+
+test("volume affects playing music and persists through mute, pause and restart", () => {
+  const h = audioHarness();
+  h.music.setVolume(.5); h.music.start(120, 120);
+  assert.equal(h.gains[0].gain.value, .06);
+  h.music.setVolume(0);
+  assert.equal(h.gains[0].gain.value, 0);
+  h.music.stop(); h.music.setVolume(.8);
+  assert.equal(h.timers.size, 0);
+  h.music.start(90, 120);
+  assert.equal(h.gains[0].gain.value, .096);
+  h.music.setEnabled(false); h.music.setVolume(1);
+  assert.equal(h.gains[0].gain.value, 0);
+  h.music.setEnabled(true);
+  assert.equal(h.gains[0].gain.value, .12);
   h.music.stop();
 });

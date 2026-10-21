@@ -8,7 +8,7 @@ const retry = document.querySelector("#reload-button");
 retry.addEventListener("click", () => location.reload());
 
 try {
-  await import("./game.js?rev=audio-gesture-1");
+  await import("./game.js?rev=audio-check-2");
   startButton.disabled = false;
   status.hidden = true;
 } catch (error) {

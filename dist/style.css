@@ -69,6 +69,7 @@ button { color: inherit; }
 .pause-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .pause-options button { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 13px 10px; border: 1px solid var(--line); border-radius: 8px; background: #1e3025; font-size: 12px; cursor: pointer; }
 .pause-options button:hover { border-color: var(--green); }
+.pause-options button[data-open-audio] { grid-column: 1 / -1; }
 #pause-dialog .text-button { display: block; margin: 16px auto 0; font-size: 12px; }
 .pause-hint { margin: 18px 0 0; color: var(--muted); font-size: 11px; text-align: center; }
 .pause-hint kbd { margin-right: 4px; padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; }
@@ -218,6 +219,29 @@ h1 em { color: var(--green); font-style: normal; }
 .description-group p { margin: auto 0 0; padding-top: 12px; color: #adbcaf; font-size: var(--setup-copy); line-height: 1.6; }
 .description-group p b { color: #e4d2b2; font-weight: 700; }
 .keybindings-link { padding: 0; border: 0; color: var(--green); background: none; font: inherit; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; cursor: pointer; }
+
+#audio-dialog { width: min(510px, calc(100% - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 24px; overflow-y: auto; border: 1px solid #536a48; border-radius: 16px; color: var(--ink); background: #14231d; box-shadow: 0 24px 90px #000b; }
+#audio-dialog::backdrop { background: #040a07d9; backdrop-filter: blur(7px); }
+.audio-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.audio-heading .eyebrow { margin: 0 0 6px; font-size: 11px; }
+.audio-heading h2 { margin: 0; font-size: 22px; }
+#audio-close { width: 36px; height: 36px; flex-shrink: 0; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: #0b1711; font-size: 25px; cursor: pointer; }
+#audio-description, .native-audio-check p, .audio-help, #audio-test-result { margin: 12px 0; font-size: 13px; line-height: 1.7; color: #bdc9c0; }
+.audio-state { padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #0b1711; }
+.audio-state strong, .audio-state span { display: block; font-size: 13px; line-height: 1.6; }
+.audio-state strong { color: var(--green); }
+.audio-state span { margin-top: 4px; color: var(--muted); }
+.audio-volume { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin: 18px 0; font-size: 14px; }
+.audio-volume input { grid-column: 1 / -1; width: 100%; accent-color: var(--green); cursor: pointer; }
+.audio-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.audio-actions button { flex: 1; min-height: 44px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; cursor: pointer; }
+#audio-test { color: #152016; background: var(--green); font-weight: 700; }
+#audio-reconnect { color: var(--ink); background: #24362b; }
+.native-audio-check { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.native-audio-check h3 { margin: 0; font-size: 14px; }
+.native-audio-check audio { display: block; width: 100%; height: 42px; }
+.audio-help { margin-bottom: 0; }
+#audio-dialog button:focus-visible, #audio-volume:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
 
 #keybindings-dialog { position: fixed; width: min(580px, calc(100% - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 20px; overflow-y: auto; border: 1px solid #536a48; border-radius: 16px; color: var(--ink); background: #14231d; box-shadow: 0 24px 90px #000b; }
 #keybindings-dialog::backdrop { background: #040a07d9; backdrop-filter: blur(7px); }
