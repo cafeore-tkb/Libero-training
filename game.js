@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { createFeedback, serviceJudgment } from "./feedback.js";
+import { createFeedback, serviceJudgment } from "./feedback.js?rev=audio-gesture-1";
 import { createServiceCounts, orderStageKey, evaluateService, achievementLabel, achievementValue, serviceRank } from "./evaluation.js";
 import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
 import { selection, updateSetupUI } from "./setup.js";

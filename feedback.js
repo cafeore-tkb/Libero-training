@@ -1,4 +1,4 @@
-import { createMusic } from "./music.js";
+import { createMusic } from "./music.js?rev=audio-gesture-1";
 
 export function playShiftWhistle(context, destination) {
   // A short referee-style double whistle, with soft attacks and a capped level.
@@ -36,7 +36,7 @@ export function serviceJudgment(stage, temperature, clearsBacklog) {
   return { title: "DELIVERED", detail: "900mlを提供。次の準備へ！", color: "#79d9ed", sound: "serve" };
 }
 
-export function createFeedback({ THREE, scene, camera }) {
+export function createFeedback({ THREE, scene, camera, musicFactory = createMusic }) {
   const layer = document.querySelector("#feedback-layer");
   const judgment = document.querySelector("#service-feedback");
   const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
@@ -63,17 +63,18 @@ export function createFeedback({ THREE, scene, camera }) {
     try {
       const Audio = window.AudioContext || window.webkitAudioContext;
       if (!Audio) return;
-      if (!context) {
+      if (!context || context.state === "closed") {
+        try { music?.stop(); } catch { /* A closed device may no longer accept automation. */ }
         context = new Audio();
         master = context.createGain();
         master.gain.value = soundEnabled ? .2 : 0;
         master.connect(context.destination);
-        music = createMusic(context);
+        music = musicFactory(context);
         music.setEnabled(musicEnabled);
         music.setVisible(!document.hidden);
         if (musicSession.active) music.start(musicSession.remaining, musicSession.duration);
       }
-      context.resume().catch(() => {});
+      if (context.state !== "running") context.resume().catch(() => {});
     } catch { /* Audio is optional; gameplay must still work. */ }
   }
 
@@ -209,7 +210,17 @@ export function createFeedback({ THREE, scene, camera }) {
     music?.setVisible(!document.hidden);
     if (!document.hidden && musicSession.active) unlockAudio();
   });
-  window.addEventListener("pagehide", stopMusic);
+  // Unlock inside the actual input event, before a button's click handler runs.
+  // Retry after autoplay restrictions or mobile audio interruptions as well.
+  document.addEventListener("pointerdown", unlockAudio, { capture: true, passive: true });
+  document.addEventListener("touchend", unlockAudio, { capture: true, passive: true });
+  document.addEventListener("keydown", unlockAudio, { capture: true });
+  // Keep the shift's intent when the browser restores this page from its cache.
+  window.addEventListener("pagehide", () => music?.setVisible(false));
+  window.addEventListener("pageshow", () => {
+    music?.setVisible(!document.hidden);
+    if (musicSession.active) unlockAudio();
+  });
 
   return {
     unlockAudio, play, pulse, burst, announce, waterTrail, tick, countResult, clear,
