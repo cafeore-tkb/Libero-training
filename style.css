@@ -3,7 +3,7 @@
   --muted: #96a59d;
   --panel: rgba(16, 28, 23, 0.88);
   --line: rgba(230, 239, 228, 0.14);
-  --green: #b7ee68;
+  --green: #adff00;
   --orange: #ff9b56;
   --danger: #ff655f;
   font-family: "Noto Sans JP", sans-serif;
@@ -152,7 +152,7 @@ h1 em { color: var(--green); font-style: normal; }
 .option-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
 .duration-options { grid-template-columns: repeat(3, 1fr); }
 .setup-option { min-width: 0; min-height: 100px; padding: 12px 9px; border: 1px solid #ffffff17; border-radius: 8px; color: #e4e9df; background: #0a1711; cursor: pointer; text-align: left; transition: border-color .16s, color .16s, background .16s, transform .16s; }
-.setup-option:hover { border-color: #b7ee6870; background: #1c3124; transform: translateY(-2px); }
+.setup-option:hover { border-color: #adff0070; background: #1c3124; transform: translateY(-2px); }
 .setup-option b { display: flex; align-items: center; min-height: 34px; font: 900 13px/1.3 "Noto Sans JP", sans-serif; letter-spacing: -.035em; white-space: normal; }
 .setup-option small { display: block; margin-top: 7px; color: #a6b5a9; font: 500 12px/1.4 "DM Mono"; white-space: nowrap; }
 .difficulty-options .setup-option, .time-options .setup-option { height: 114px; }
@@ -162,7 +162,7 @@ h1 em { color: var(--green); font-style: normal; }
 .time-limit { display: block; margin-top: 7px; color: #a6b5a9; font-size: 11px; white-space: nowrap; }
 .time-limit strong { color: #e4e9df; font: 500 17px "DM Mono"; }
 .compact-label { display: none; }
-.setup-option.selected { border-color: #d7efb6; color: #1b2a18; background: #bfe88b; box-shadow: inset 0 0 0 1px #e8ffd455; }
+.setup-option.selected { border-color: var(--green); color: #1b2a18; background: var(--green); }
 .setup-option.selected small, .setup-option.selected .time-limit { color: #3b542e; }
 .setup-option.selected .time-limit strong { color: #1b2a18; }
 .setup-option.danger.selected { border-color: #ffd6bf; color: #321a12; background: #f2b497; }
@@ -176,7 +176,7 @@ h1 em { color: var(--green); font-style: normal; }
 .description-group { display: flex; flex-direction: column; }
 .description-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 5px 0; }
 .description-steps > span { display: flex; align-items: center; gap: 9px; min-width: 0; color: #e3eade; font-size: 13px; line-height: 1.4; white-space: nowrap; }
-.description-steps kbd { display: grid; place-items: center; flex: 0 0 32px; height: 32px; border: 1px solid #77907466; border-radius: 6px; color: #c5e9a3; background: #1e3225; box-shadow: 0 2px #07100a; font: 500 14px "DM Mono"; }
+.description-steps kbd { display: grid; place-items: center; flex: 0 0 32px; height: 32px; border: 1px solid #77907466; border-radius: 6px; color: var(--green); background: #1e3225; box-shadow: 0 2px #07100a; font: 500 14px "DM Mono"; }
 .description-group p { margin: auto 0 0; padding-top: 12px; color: #adbcaf; font-size: 12px; line-height: 1.6; }
 .description-group p b { color: #e4d2b2; font-weight: 700; }
 .rules { display: grid; grid-template-columns: repeat(4, 1fr); margin: 27px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -188,7 +188,7 @@ h1 em { color: var(--green); font-style: normal; }
 .start-button { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 16px 19px; border: 0; color: #132015; background: var(--green); font-weight: 900; cursor: pointer; }
 .start-button span { font-size: 22px; }
 .start-button:disabled { opacity: .45; cursor: wait; }
-.shift-start { min-height: 72px; padding: 13px 22px; border: 1px solid #d5efb1; border-radius: 10px; background: #bfe88b; box-shadow: 0 6px 20px #0002; transition: transform .18s, filter .18s; }
+.shift-start { min-height: 72px; padding: 13px 22px; border: 1px solid var(--green); border-radius: 10px; background: var(--green); box-shadow: 0 6px 20px #0002; transition: transform .18s, filter .18s; }
 .shift-start:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.06); }
 .shift-start .start-label { font-size: 20px; line-height: 1.25; text-align: left; }
 .shift-start .start-label small { display: block; margin-bottom: 5px; color: #456232; font: 500 9px "DM Mono"; letter-spacing: .1em; }
