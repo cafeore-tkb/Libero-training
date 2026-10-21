@@ -94,7 +94,7 @@ test("music stays independent of SFX mute, and input cannot override BGM OFF", (
   } finally { h.restore(); }
 });
 
-test("a closed audio device is recreated on input using the current music session", () => {
+test("a closed effects device is recreated without interrupting media BGM", () => {
   const h = harness();
   try {
     h.allow(); h.feedback.startMusic(120, 120);
@@ -102,8 +102,9 @@ test("a closed audio device is recreated on input using the current music sessio
     h.doc.dispatchEvent(new Event("pointerdown"));
     assert.equal(h.contexts.length, 2);
     assert.equal(h.contexts[1].state, "running");
-    assert.equal(h.musicInstances[0].stops, 1);
-    assert.equal(h.musicInstances[1].starts, 1);
+    assert.equal(h.musicInstances.length, 1);
+    assert.equal(h.musicInstances[0].stops, 0);
+    assert.equal(h.musicInstances[0].starts, 1);
   } finally { h.restore(); }
 });
 
@@ -115,8 +116,9 @@ test("explicit reconnection replaces the device without losing the shift, mute, 
     assert.equal(h.contexts[0].state, "closed");
     assert.equal(h.contexts[1].state, "running");
     assert.equal(h.contexts[1].master.gain.value, 0);
-    assert.equal(h.musicInstances[1].starts, 1);
-    assert.equal(h.musicInstances[1].volume, .4);
+    assert.equal(h.musicInstances.length, 1);
+    assert.equal(h.musicInstances[0].starts, 1);
+    assert.equal(h.musicInstances[0].volume, .4);
     assert.equal(h.feedback.audioStatus().soundEnabled, false);
   } finally { h.restore(); }
 });
@@ -141,5 +143,20 @@ test("blocked audio exposes a useful error, and a successful gesture clears it",
     await Promise.resolve();
     assert.equal(h.feedback.audioStatus().state, "running");
     assert.equal(h.feedback.audioStatus().error, "");
+  } finally { h.restore(); }
+});
+
+test("BGM starts even when Web Audio is unavailable or fails to initialize", () => {
+  const h = harness();
+  try {
+    h.win.AudioContext = undefined;
+    h.feedback.startMusic(120, 120);
+    assert.equal(h.musicInstances[0].starts, 1);
+    assert.equal(h.contexts.length, 0);
+    assert.equal(h.feedback.audioStatus().supported, false);
+    h.feedback.stopMusic();
+    h.win.AudioContext = class { constructor() { throw new Error("No audio device"); } };
+    h.feedback.startMusic(90, 90);
+    assert.equal(h.musicInstances[0].starts, 2);
   } finally { h.restore(); }
 });

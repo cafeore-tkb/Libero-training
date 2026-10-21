@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./style.css?rev=audio-check-2" />
+    <link rel="stylesheet" href="./style.css?rev=media-bgm-1" />
   </head>
   <body>
     <main id="app">
@@ -28,6 +28,7 @@
           <button id="sound-toggle" class="icon-button" aria-label="効果音を切り替え" aria-pressed="true" title="効果音 ON/OFF">♪</button>
         </div>
       </header>
+      <button type="button" id="music-retry" class="music-retry" hidden>BGMを再生 ▶</button>
 
       <section class="scoreboard" aria-label="ゲーム状況">
         <div class="metric achievement" title="提供時の状態で評価。ON TIME 100% / DELAYED 50% / CRITICAL 10% / OVERDUE・猶予切れの未提供 0%。猶予中は評価保留。S:90%以上 / A:80%以上 / B:70%以上 / C:60%以上 / D:50%以上 / F:50%未満。"><span>達成度</span><strong id="achievement">未評価</strong></div>
@@ -175,7 +176,7 @@
       <dialog id="audio-dialog" aria-labelledby="audio-title" aria-describedby="audio-description">
         <div class="audio-heading"><div><p class="eyebrow">SOUND CHECK</p><h2 id="audio-title">音声の確認</h2></div><button type="button" id="audio-close" aria-label="音声の確認を閉じる" autofocus>×</button></div>
         <p id="audio-description">テスト音で出力を確認できます。プレイ中は、この画面を閉じるまで一時停止します。</p>
-        <div class="audio-state"><strong id="audio-status" role="status"></strong><span id="audio-mute-status"></span></div>
+        <div class="audio-state"><strong id="audio-status" role="status"></strong><span id="audio-mute-status"></span><span id="music-playback-status" role="status"></span></div>
         <label class="audio-volume" for="audio-volume"><span>ゲーム音量</span><output id="audio-volume-value" for="audio-volume">100%</output><input id="audio-volume" type="range" min="0" max="100" value="100" /></label>
         <div class="audio-actions"><button type="button" id="audio-test">テスト音を鳴らす</button><button type="button" id="audio-reconnect">音声を再接続</button></div>
         <p id="audio-test-result" role="status"></p>
@@ -202,6 +203,6 @@
     <script type="importmap">
       {"imports":{"three":"./vendor/three.module.js"}}
     </script>
-    <script type="module" src="./boot.js?rev=audio-check-2"></script>
+    <script type="module" src="./boot.js?rev=media-bgm-1"></script>
   </body>
 </html>

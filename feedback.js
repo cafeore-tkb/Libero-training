@@ -1,4 +1,4 @@
-import { createMusic } from "./music.js?rev=audio-check-2";
+import { createMediaMusic } from "./media-music.js?rev=media-bgm-1";
 
 export function playShiftWhistle(context, destination) {
   // A short referee-style double whistle, with soft attacks and a capped level.
@@ -36,7 +36,7 @@ export function serviceJudgment(stage, temperature, clearsBacklog) {
   return { title: "DELIVERED", detail: "900mlを提供。次の準備へ！", color: "#79d9ed", sound: "serve" };
 }
 
-export function createFeedback({ THREE, scene, camera, musicFactory = createMusic }) {
+export function createFeedback({ THREE, scene, camera, musicFactory = createMediaMusic }) {
   const layer = document.querySelector("#feedback-layer");
   const judgment = document.querySelector("#service-feedback");
   const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
@@ -47,7 +47,7 @@ export function createFeedback({ THREE, scene, camera, musicFactory = createMusi
   let musicEnabled = true;
   let volume = 1;
   let audioError = "";
-  let music;
+  const music = musicFactory({ onStatus() { document.dispatchEvent(new Event("music-status-change")); } });
   const musicSession = { active: false, remaining: 0, duration: 120 };
   let zoom = 0;
   let lastSound = -Infinity;
@@ -63,18 +63,12 @@ export function createFeedback({ THREE, scene, camera, musicFactory = createMusi
   function ensureAudio() {
     try {
       const Audio = window.AudioContext || window.webkitAudioContext;
-      if (!Audio) { audioError = "このブラウザーはゲーム音声に対応していません。"; return; }
+      if (!Audio) { audioError = "効果音用のWeb Audioは未対応です。BGMは別系統で再生します。"; return; }
       if (!context || context.state === "closed") {
-        try { music?.stop(); } catch { /* A closed device may no longer accept automation. */ }
         context = new Audio();
         master = context.createGain();
         master.gain.value = soundEnabled ? .2 * volume : 0;
         master.connect(context.destination);
-        music = musicFactory(context);
-        music.setVolume?.(volume);
-        music.setEnabled(musicEnabled);
-        music.setVisible(!document.hidden);
-        if (musicSession.active) music.start(musicSession.remaining, musicSession.duration);
       }
       return context;
     } catch (error) { audioError = `音声の初期化に失敗しました（${error.name || "Error"}）。`; }
@@ -82,6 +76,8 @@ export function createFeedback({ THREE, scene, camera, musicFactory = createMusi
 
   function unlockAudio() {
     if (!soundEnabled && !musicEnabled) return;
+    // BGM does not depend on creating or resuming a Web Audio device.
+    if (musicEnabled) music.retry?.();
     const device = ensureAudio();
     if (!device) return;
     if (device.state === "running") { audioError = ""; return; }
@@ -96,8 +92,7 @@ export function createFeedback({ THREE, scene, camera, musicFactory = createMusi
 
   function reconnectAudio() {
     const previous = context;
-    try { music?.stop(); } catch { /* Discard a disconnected device. */ }
-    context = undefined; music = undefined; master = undefined; audioError = "";
+    context = undefined; master = undefined; audioError = "";
     // Recreate synchronously in the user's click, not after awaiting close().
     try { previous?.close?.().catch(() => {}); } catch { /* Already closed. */ }
     ensureAudio();
@@ -279,8 +274,9 @@ export function createFeedback({ THREE, scene, camera, musicFactory = createMusi
     unlockAudio, reconnectAudio, testAudio, play, pulse, burst, announce, waterTrail, tick, countResult, clear,
     audioStatus() {
       return { state: context?.state || "uninitialized", supported: !!(window.AudioContext || window.webkitAudioContext),
-        error: audioError, musicEnabled, soundEnabled, volume };
+        error: audioError, musicEnabled, soundEnabled, volume, music: music.status?.() };
     },
+    retryMusic() { if (musicEnabled) music.retry?.(); },
     setVolume(value) {
       if (!Number.isFinite(value)) return;
       volume = Math.min(1, Math.max(0, value));

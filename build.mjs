@@ -1,5 +1,7 @@
 import { cp, mkdir, rm } from "node:fs/promises";
+import { writeMusicAssets } from "./music-assets.mjs";
 
+await writeMusicAssets();
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist", { recursive: true });
 await Promise.all([
@@ -8,6 +10,8 @@ await Promise.all([
   cp("game.js", "dist/game.js"),
   cp("feedback.js", "dist/feedback.js"),
   cp("music.js", "dist/music.js"),
+  cp("media-music.js", "dist/media-music.js"),
+  cp("audio", "dist/audio", { recursive: true }),
   cp("audio-ui.js", "dist/audio-ui.js"),
   cp("evaluation.js", "dist/evaluation.js"),
   cp("water-return.js", "dist/water-return.js"),

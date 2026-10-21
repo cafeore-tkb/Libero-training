@@ -27,16 +27,27 @@ export function bindAudioUI(feedback) {
   const native = document.querySelector("#native-audio-test");
   const volume = document.querySelector("#audio-volume");
   const level = document.querySelector("#audio-volume-value");
+  const musicStatus = document.querySelector("#music-playback-status");
+  const musicRetry = document.querySelector("#music-retry");
   let timer;
   let testNumber = 0;
+  function refreshMusic() {
+    const music = feedback.audioStatus().music;
+    const labels = { idle: "待機中", playing: "再生中", loading: "読み込み中", blocked: "再生許可待ち", error: "再生エラー", paused: "一時停止中", muted: "OFF" };
+    musicStatus.textContent = music ? `BGM：${music.error || labels[music.state] || music.state}` : "";
+    musicRetry.hidden = !music?.active || !["blocked", "error"].includes(music.state);
+  }
+  document.addEventListener("music-status-change", refreshMusic);
+  musicRetry.onclick = () => { feedback.retryMusic(); refreshMusic(); };
   function refresh() {
     const audio = feedback.audioStatus();
     const labels = { uninitialized: "未接続", running: "音声エンジン動作中", suspended: "音声の開始待ち", interrupted: "音声が中断されています", closed: "音声の接続が切れています" };
-    status.textContent = audio.error || labels[audio.state] || audio.state;
+    status.textContent = audio.error || `効果音：${labels[audio.state] || audio.state}`;
     document.querySelector("#audio-mute-status").textContent = `BGM ${audio.musicEnabled ? "ON" : "OFF"} / 効果音 ${audio.soundEnabled ? "ON" : "OFF"}`;
     volume.value = Math.round(audio.volume * 100);
     level.textContent = `${volume.value}%`;
     native.volume = audio.volume;
+    refreshMusic();
   }
   document.querySelectorAll("[data-open-audio]").forEach(button => button.addEventListener("click", () => {
     if (dialog.open) return;
@@ -67,4 +78,5 @@ export function bindAudioUI(feedback) {
   };
   volume.oninput = () => { feedback.setVolume(Number(volume.value) / 100); refresh(); };
   native.addEventListener("error", () => { result.textContent = "標準プレーヤーでも音声を開けませんでした。ブラウザーの設定を確認してください。"; });
+  refreshMusic();
 }

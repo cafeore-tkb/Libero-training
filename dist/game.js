@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { createFeedback, serviceJudgment } from "./feedback.js?rev=audio-check-2";
-import { bindAudioUI } from "./audio-ui.js?rev=audio-check-2";
+import { createFeedback, serviceJudgment } from "./feedback.js?rev=media-bgm-1";
+import { bindAudioUI } from "./audio-ui.js?rev=media-bgm-1";
 import { createServiceCounts, orderStageKey, evaluateService, achievementLabel, achievementValue, serviceRank } from "./evaluation.js";
 import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
 import { selection, updateSetupUI } from "./setup.js";
