@@ -5,7 +5,7 @@ import { createServiceCounts, orderStageKey, evaluateService, achievementLabel, 
 import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
 import { selection, updateSetupUI } from "./setup.js";
 import { planWaterReturn, transferReturnedWater } from "./water-return.js";
-import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE, frameDeltaSeconds } from "./timing.js?rev=nonnegative-clock-1";
+import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE, frameDeltaSeconds } from "./timing.js?rev=heating-pace-1";
 import { SERVING_TARGET, findServingQueueIndex, pourAvailableWater, mostUrgentOrder } from "./serving.js?rev=urgent-target-1";
 import { arrangePotQueue, potQueueLayout, POT_QUEUE_POSITIONS } from "./pot-queue.js";
 import { keyboardAction, neighboringKettleIndex } from "./keybindings.js";
