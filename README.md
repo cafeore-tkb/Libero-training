@@ -1,5 +1,9 @@
 # LIBERO — 湯沸かし訓練
 
+公開URL: https://cafeore-tkb.github.io/Libero-training/
+
+`main` へのpush時に、GitHub Actionsでテストとビルドを実行し、`dist/` をGitHub Pagesへ自動公開します。手動で再公開する場合は、Actionsの「Deploy GitHub Pages」から「Run workflow」を実行してください。
+
 学園祭のコーヒー店舗で、最大5台の電気ケトルを管理するリベロ役の3Dトレーニングゲームです。難易度は `EASY`（2台・3人）、`NORMAL`（3台・4人）、`HARD`（4台・5人）、`DEATH MARCH`（5台・6人）の4段階です。さらに `MORNING`、`LUNCH`、`AFTERNOON`、`CLOSING` の時間帯と、90秒・120秒・150秒のプレイ時間を選択できます。時間帯によって注文間隔と3D空間の光色が変化します。
 
 開始画面は `DIFFICULTY`、`TIME SLOT`、`PLAY TIME`、`DESCRIPTION` の2列×2行で構成し、設定と操作説明をスクロールせず確認できるようにしています。
