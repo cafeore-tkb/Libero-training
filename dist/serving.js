@@ -1,3 +1,5 @@
+import { ROOM_TEMPERATURE } from "./timing.js";
+
 export const SERVING_TARGET = .9;
 const EPSILON = 1e-9;
 const roundLiters = value => Math.round(value * 1e6) / 1e6;
@@ -36,7 +38,7 @@ export function pourAvailableWater(kettle, pot, dripper) {
   pot.assignedDripper = dripper;
 
   kettle.water = roundLiters(Math.max(0, kettle.water - transferred));
-  kettle.temp = Math.max(22, kettle.temp - 8 * (transferred / SERVING_TARGET));
+  kettle.temp = Math.max(ROOM_TEMPERATURE, kettle.temp - 8 * (transferred / SERVING_TARGET));
   kettle.state = kettle.water > EPSILON ? (kettle.temp >= 92 ? "ready" : "filled") : "empty";
   kettle.boilTime = 0;
 

@@ -1,5 +1,5 @@
 // Bind settings before importing anything that requires WebGL.
-import "./setup.js";
+import "./setup.js?rev=initial-easy-quick-morning-1";
 import "./keybindings-ui.js";
 
 const startButton = document.querySelector("#start-button");
@@ -8,7 +8,7 @@ const retry = document.querySelector("#reload-button");
 retry.addEventListener("click", () => location.reload());
 
 try {
-  await import("./game.js?rev=heating-pace-1");
+  await import("./game.js?rev=balanced-score-1");
   startButton.disabled = false;
   status.hidden = true;
 } catch (error) {

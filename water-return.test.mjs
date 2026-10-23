@@ -80,7 +80,7 @@ test("a complete transfer empties the pot", () => {
   assert.equal(result.remaining, 0);
   assert.equal(target.water, 1.15);
   assert.equal(returned.water, 0);
-  assert.equal(returned.temp, 22);
+  assert.equal(returned.temp, 20);
   assert.equal(returned.waterLevel, 0);
 });
 

@@ -1,6 +1,8 @@
+import { ROOM_TEMPERATURE } from "./timing.js";
+
 export function emptyCoffeePotState() {
   return {
-    water: 0, temp: 22, waterLevel: 0, flash: 0, returnAnim: 0,
+    water: 0, temp: ROOM_TEMPERATURE, waterLevel: 0, flash: 0, returnAnim: 0,
     busyTime: 0, presentationTime: 0, assignedDripper: null, returnPending: false
   };
 }
@@ -16,10 +18,10 @@ export function advancePotLifecycle(pot, seconds, random = Math.random) {
     pot.returnPending = false;
     pot.assignedDripper = null;
     pot.water = Math.round((.4 + random() * .1) * 100) / 100;
-    pot.temp = Math.max(22, pot.temp - (6 + random() * 4));
+    pot.temp = Math.max(ROOM_TEMPERATURE, pot.temp - (6 + random() * 4));
     pot.flash = 1;
     return true;
   }
-  if (!wasBusy && pot.water > 0) pot.temp = Math.max(22, pot.temp - .18 * seconds);
+  if (!wasBusy && pot.water > 0) pot.temp = Math.max(ROOM_TEMPERATURE, pot.temp - .18 * seconds);
   return false;
 }

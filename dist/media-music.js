@@ -1,6 +1,4 @@
-import { musicProfile } from "./music.js?rev=media-bgm-1";
-
-const TEMPOS = { flow: 94, build: 104, rush: 118, final: 134 };
+import { musicProfile } from "./music.js?rev=clear-bgm-2";
 
 // Standard media playback is independent of AudioContext and the render thread.
 export function createMediaMusic({ audioFactory = src => new Audio(src), onStatus = () => {} } = {}) {
@@ -17,9 +15,12 @@ export function createMediaMusic({ audioFactory = src => new Audio(src), onStatu
 
   function track(stage) {
     if (!tracks.has(stage)) {
-      const audio = audioFactory(new URL(`./audio/bgm-${stage}.wav?rev=media-bgm-1`, import.meta.url).href);
+      const audio = audioFactory(new URL(`./audio/bgm-${stage}.wav?rev=clear-bgm-2`, import.meta.url).href);
       audio.loop = true;
       audio.preload = "auto";
+      // Each stage is rendered at its own tempo. Continuous playback-rate
+      // changes invoke browser time stretching and can smear sustained notes.
+      audio.playbackRate = 1;
       audio.addEventListener("error", () => {
         if (audio === current && shouldPlay()) report("error", "BGMファイルを読み込めません。再生ボタンで再試行してください。");
       });
@@ -40,7 +41,6 @@ export function createMediaMusic({ audioFactory = src => new Audio(src), onStatu
     if (!current) current = track(profile.stage);
     if (!current.paused && state === "playing") return;
     current.volume = .45 * volume;
-    current.playbackRate = profile.bpm / TEMPOS[profile.stage];
     const attempt = ++generation;
     const audio = current;
     report("loading");
@@ -75,7 +75,6 @@ export function createMediaMusic({ audioFactory = src => new Audio(src), onStatu
       current.currentTime = 0;
       if (shouldPlay()) play();
     }
-    if (current) current.playbackRate = profile.bpm / TEMPOS[profile.stage];
   }
 
   return {

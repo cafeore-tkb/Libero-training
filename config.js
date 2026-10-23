@@ -2,7 +2,8 @@ export const DIFFICULTIES = {
   easy: { label: "EASY", kettles: 2, drippers: 3 },
   normal: { label: "NORMAL", kettles: 3, drippers: 4 },
   hard: { label: "HARD", kettles: 4, drippers: 5 },
-  "death-march": { label: "DEATH MARCH", kettles: 5, drippers: 6 }
+  actual: { label: "ACTUAL", kettles: 5, drippers: 6 },
+  "death-march": { label: "DEATH MARCH", kettles: 4, drippers: 6, hidden: true }
 };
 
 export const PLAY_DURATIONS = [90, 120, 150];

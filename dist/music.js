@@ -14,9 +14,11 @@ export function musicProfile(remaining, duration) {
 }
 
 // Original E-minor groove, synthesized locally; the music never changes game time.
-const CHORDS = [[52, 55, 59, 62], [48, 52, 55, 59], [45, 48, 52, 55], [47, 50, 54, 57]];
-const ROOTS = [40, 36, 33, 35];
-const ARPEGGIO = [0, 2, 1, 3, 2, 1, 3, 2];
+// Separate the three upper voices from the bass; share the voicings with the
+// bundled renderer so both playback paths have the same clear arrangement.
+export const MUSIC_CHORDS = [[64, 71, 79], [60, 67, 76], [57, 64, 72], [59, 66, 74]];
+export const MUSIC_ROOTS = [40, 36, 33, 35];
+const ARPEGGIO = [0, 2, 1, 2, 0, 1, 2, 1];
 
 export function createMusic(context, { setTimer = setInterval, clearTimer = clearInterval } = {}) {
   const output = context.createGain();
@@ -82,26 +84,27 @@ export function createMusic(context, { setTimer = setInterval, clearTimer = clea
     const source = context.createOscillator();
     source.frequency.setValueAtTime(115, at);
     source.frequency.exponentialRampToValueAtTime(45, at + .12);
-    voice(source, at, .18, .28);
+    voice(source, at, .1, .09);
   }
 
   function scheduleStep(at) {
     const beat = step % 16;
     const bar = Math.floor(step / 16);
-    const chord = CHORDS[bar % CHORDS.length];
+    const chord = MUSIC_CHORDS[bar % MUSIC_CHORDS.length];
     const urgent = profile.stage === "rush" || profile.stage === "final";
     const final = profile.stage === "final";
     // Sparse electric-piano chords become a busier, higher arpeggio in the finish.
     if (beat === 0 || beat === 10) {
-      chord.forEach((note, index) => tone(note, at + index * .009, .55, beat === 0 ? .065 : .04));
+      chord.forEach((note, index) => tone(note, at + index * .012, .24, beat === 0 ? .045 : .03));
     }
     if (beat === 0 || beat === 8 || (urgent && (beat === 6 || beat === 14))) {
-      tone(ROOTS[bar % ROOTS.length], at, .24, .17, "triangle");
+      tone(MUSIC_ROOTS[bar % MUSIC_ROOTS.length], at, .16, .09);
     }
     const melodyStep = final ? 1 : urgent ? 2 : profile.stage === "build" ? 4 : 8;
     if (beat % melodyStep === (melodyStep === 1 ? 0 : 2 % melodyStep)) {
-      const note = chord[ARPEGGIO[Math.floor(step / melodyStep) % ARPEGGIO.length]] + 12;
-      tone(note, at, .17, final ? .045 : .07, "triangle");
+      const note = chord[ARPEGGIO[Math.floor(step / melodyStep) % ARPEGGIO.length]];
+      const melodyLength = Math.min(.15, 60 / profile.bpm / 4 * .72);
+      tone(note, at, melodyLength, final ? .04 : .055);
     }
     if (beat === 0 || beat === 8 || (final && (beat === 3 || beat === 11))) kick(at);
     if (beat === 4 || beat === 12) percussion(at, .11, .09, 1500, "bandpass");

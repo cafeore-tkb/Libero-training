@@ -1,3 +1,5 @@
+import { ROOM_TEMPERATURE } from "./timing.js";
+
 const CAPACITY = 1.2;
 const EPSILON = 1e-9;
 const roundLiters = value => Math.round(value * 1e6) / 1e6;
@@ -35,7 +37,7 @@ export function transferReturnedWater(kettle, pot, requestedAmount) {
   const complete = pot.water <= EPSILON;
   if (complete) {
     pot.water = 0;
-    pot.temp = 22;
+    pot.temp = ROOM_TEMPERATURE;
     pot.waterLevel = 0;
   } else {
     pot.waterLevel = pot.water / .9;

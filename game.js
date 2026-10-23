@@ -1,17 +1,19 @@
 import * as THREE from "three";
-import { createFeedback, serviceJudgment } from "./feedback.js?rev=media-bgm-1";
+import { createFeedback, serviceJudgment } from "./feedback.js?rev=arcade-feedback-1";
 import { bindAudioUI } from "./audio-ui.js?rev=media-bgm-1";
 import { createServiceCounts, orderStageKey, evaluateService, achievementLabel, achievementValue, serviceRank } from "./evaluation.js";
+import { calculateScore } from "./score.js?rev=balanced-score-1";
 import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
-import { selection, updateSetupUI } from "./setup.js";
+import { selection, updateSetupUI } from "./setup.js?rev=initial-easy-quick-morning-1";
 import { planWaterReturn, transferReturnedWater } from "./water-return.js";
-import { FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE, frameDeltaSeconds } from "./timing.js?rev=heating-pace-1";
+import { BOIL_TEMPERATURE, FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE, ROOM_TEMPERATURE, frameDeltaSeconds } from "./timing.js?rev=measured-cycle-1";
 import { SERVING_TARGET, findServingQueueIndex, pourAvailableWater, mostUrgentOrder } from "./serving.js?rev=urgent-target-1";
 import { arrangePotQueue, potQueueLayout, POT_QUEUE_POSITIONS } from "./pot-queue.js";
 import { keyboardAction, neighboringKettleIndex } from "./keybindings.js";
 import { updateKeyBindingLabels } from "./keybindings-ui.js";
 import { createPauseController } from "./pause.js";
 import { emptyCoffeePotState, advancePotLifecycle } from "./pot-lifecycle.js?rev=nonnegative-clock-1";
+import { unlockDeathMarchIfEligible } from "./progression.js";
 
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -23,9 +25,11 @@ renderer.toneMappingExposure = 1.05;
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x12221c, 0.034);
-const camera = new THREE.PerspectiveCamera(39, innerWidth / innerHeight, 0.1, 100);
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.1, 100);
 const WORKSPACE_CENTER = 1.35;
 const CAMERA_DISTANCE = 19.5;
+const WORKSPACE_VERTICAL_OFFSET = .06;
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 camera.position.set(WORKSPACE_CENTER, 8.2, CAMERA_DISTANCE);
 camera.lookAt(WORKSPACE_CENTER, 1.25, .35);
 
@@ -147,8 +151,16 @@ function makeKettle(index, x, z) {
   const led = new THREE.Mesh(new THREE.SphereGeometry(.07, 12, 12), ledMat);
   led.position.set(-.18, .16, .59); group.add(led);
 
-  const selector = new THREE.Mesh(new THREE.RingGeometry(.75, .82, 32), new THREE.MeshBasicMaterial({ color: 0xb7ee68, side: THREE.DoubleSide, transparent: true, opacity: 0 }));
+  const selector = new THREE.Mesh(new THREE.RingGeometry(.79, .84, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0 }));
   selector.rotation.x = -Math.PI / 2; selector.position.y = .015; group.add(selector);
+
+  // A wraparound status light remains visible from every viewing angle.
+  const readyBand = new THREE.Mesh(new THREE.TorusGeometry(.61, .055, 8, 48), new THREE.MeshBasicMaterial({ color: 0xc6ff72, toneMapped: false }));
+  readyBand.rotation.x = -Math.PI / 2; readyBand.position.y = .22;
+  readyBand.visible = false; group.add(readyBand);
+  const readyHalo = new THREE.Mesh(new THREE.RingGeometry(.65, .75, 48), new THREE.MeshBasicMaterial({ color: 0xc6ff72, side: THREE.DoubleSide, transparent: true, opacity: .65, depthWrite: false, toneMapped: false }));
+  readyHalo.rotation.x = -Math.PI / 2; readyHalo.position.y = .025;
+  readyHalo.visible = false; group.add(readyHalo);
 
   const steam = [];
   for (let s = 0; s < 6; s++) {
@@ -157,7 +169,7 @@ function makeKettle(index, x, z) {
   }
 
   scene.add(group);
-  kettleData.push({ index, group, body, led, selector, steam, water: 0, temp: 22, state: "empty", boilTime: 0, pourAnim: 0 });
+  kettleData.push({ index, group, body, led, selector, readyBand, readyHalo, steam, water: 0, temp: ROOM_TEMPERATURE, state: "empty", boilTime: 0, pourAnim: 0, boilGlowTime: 0 });
 }
 
 [
@@ -267,7 +279,6 @@ for (let i = 0; i < 5; i++) {
 }
 scene.add(sign);
 
-const ROOM_TEMP = 22;
 const KETTLE_COOL_RATE = .25;
 const ORDER_STAGES = [
   { key: "on-time", label: "ON TIME" },
@@ -281,10 +292,12 @@ const KETTLE_LAYOUTS = {
   4: [[.75, .5], [1.85, -.72], [3.05, -.72], [4.15, .5]],
   5: [[.45, .55], [1.45, -.8], [2.45, .05], [3.45, -.8], [4.45, .55]]
 };
-const state = { running: false, difficulty: "normal", timeSlot: "afternoon", playDuration: 120, activeKettles: 3, activeDrippers: 4, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 120, achievement: null, serviceCounts: createServiceCounts(), combo: 0, bestCombo: 0, served: 0, perfect: 0, recoveries: 0, flowEffect: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true, effects: true };
+const state = { running: false, difficulty: "easy", timeSlot: "morning", playDuration: 90, activeKettles: 2, activeDrippers: 3, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: 90, achievement: null, serviceCounts: createServiceCounts(), combo: 0, bestCombo: 0, served: 0, perfect: 0, recoveries: 0, flowEffect: 0, orderId: 1, orders: [], nextOrder: 1.5, sound: true, effects: true };
+state.totalServeSeconds = 0;
+const scoreNumber = new Intl.NumberFormat("ja-JP");
 const $ = (q) => document.querySelector(q);
 const ui = {
-  achievement: $("#achievement"), combo: $("#combo"), timer: $("#timer"), orders: $("#orders"), count: $("#order-count"),
+  achievement: $("#achievement"), score: $("#score"), combo: $("#combo"), timer: $("#timer"), orders: $("#orders"), count: $("#order-count"),
   number: $("#selected-number"), temp: $("#selected-temp"), water: $("#selected-water"), tempBar: $("#temp-bar"), waterBar: $("#water-bar"), tempGauge: $("#temperature-gauge"), waterGauge: $("#water-gauge"), state: $("#selected-state"),
   tabs: $("#kettle-tabs"), potQueue: $("#pot-queue"), availablePots: $("#available-pots"), target: $("#target-line"), returnHint: $("#return-hint"),
   fill: $("#fill-button"), heat: $("#heat-button"), returnWater: $("#return-button"), serve: $("#serve-button"), toast: $("#toast"),
@@ -344,7 +357,7 @@ function serviceCelebration(order, temperature) {
   state.bestCombo = Math.max(state.bestCombo, state.combo);
   const milestone = state.combo === 3 ? "FLOW!" : state.combo === 5 ? "UNSTOPPABLE" : state.combo > 0 && state.combo % 10 === 0 ? "LEGENDARY" : null;
   if (state.combo >= 3) state.flowEffect = 8;
-  feedback.announce(milestone || judgment.title, milestone ? `${state.combo} CHAIN · ${judgment.title} / ${judgment.detail}` : judgment.detail, milestone ? "#ffd67d" : judgment.color, Boolean(milestone));
+  feedback.announce(milestone || judgment.title, milestone ? `${state.combo} COMBO · ${judgment.title} / ${judgment.detail}` : judgment.detail, milestone ? "#ffd67d" : judgment.color, Boolean(milestone));
   feedback.play(milestone ? "milestone" : judgment.sound, state.combo);
   feedback.burst(milestone ? "#ffd67d" : judgment.color, milestone ? 40 : 22);
   feedback.pulse(ui.combo);
@@ -355,7 +368,9 @@ function serviceCelebration(order, temperature) {
 
 for (let i = 0; i < 5; i++) {
   const button = document.createElement("button");
-  button.className = "kettle-tab"; button.textContent = `0${i + 1}`; button.onclick = () => selectKettle(i);
+  button.className = "kettle-tab";
+  button.innerHTML = `<b>0${i + 1}</b><small></small>`;
+  button.onclick = () => selectKettle(i);
   button.dataset.keybindingControl = `kettle-${i}`;
   ui.tabs.append(button);
 }
@@ -431,7 +446,7 @@ function addOrder() {
   const variance = .9 + Math.random() * .2;
   const stageDurations = slot.orderStages.map(seconds => seconds * variance);
   const max = stageDurations.reduce((total, seconds) => total + seconds, 0);
-  state.orders.push({ id: state.orderId++, dripper, time: max, max, stageDurations, overdue: false });
+  state.orders.push({ id: state.orderId++, dripper, time: max, max, stageDurations, overdue: false, createdAt: state.playDuration - state.time });
   syncServingTarget();
   feedback.play("order");
 }
@@ -499,6 +514,7 @@ function serveSelected() {
   if (k.temp < 92) { breakChain(); feedback.play("error"); toast(`${Math.round(k.temp)}°C — まだぬるい！`, true); updateUI(); return; }
   feedback.waterTrail(k, pot);
   const pour = pourAvailableWater(k, pot, state.selectedDripper);
+  k.boilGlowTime = 0;
   k.pourAnim = 1; pot.flash = 1;
   if (!pour.complete) {
     arrangePotQueue(state.potQueue, potData);
@@ -511,11 +527,13 @@ function serveSelected() {
   const [order] = state.orders.splice(orderIndex, 1);
   state.serviceCounts[orderStageKey(order)]++;
   state.served++;
+  state.totalServeSeconds += Math.max(0, state.playDuration - state.time - order.createdAt);
   serviceCelebration(order, pot.temp);
   pot.busyTime = POT_BUSY_TIME; pot.presentationTime = POT_PRESENTATION_TIME;
   pot.returnPending = true;
   state.potQueue.splice(servingQueueIndex, 1);
   updateUI();
+  feedback.pulse(ui.score);
 }
 
 function resetGame() {
@@ -524,10 +542,11 @@ function resetGame() {
   last = performance.now();
   feedback.clear();
   feedback.unlockAudio();
+  state.totalServeSeconds = 0;
   const difficulty = DIFFICULTIES[state.difficulty];
   Object.assign(state, { running: true, activeKettles: difficulty.kettles, activeDrippers: difficulty.drippers, selected: 0, selectedDripper: 0, potQueue: [0, 1, 2, 3, 4, 5, 6, 7], filling: false, fillKettle: null, time: state.playDuration, achievement: null, serviceCounts: createServiceCounts(), combo: 0, bestCombo: 0, served: 0, perfect: 0, recoveries: 0, flowEffect: 0, orderId: 1, orders: [], nextOrder: .6 });
   kettleData.forEach(k => {
-    Object.assign(k, { water: 1.2, temp: 100, state: "ready", boilTime: 0, pourAnim: 0 });
+    Object.assign(k, { water: 1.2, temp: 100, state: "ready", boilTime: 0, pourAnim: 0, boilGlowTime: 0 });
     k.group.rotation.x = 0;
   });
   potData.forEach((pot, i) => {
@@ -562,11 +581,22 @@ function endGame() {
   ui.flowHud.hidden = true;
   const evaluation = evaluateService(state.serviceCounts, state.orders);
   state.achievement = evaluation.percentage;
+  const score = currentScore();
+  ui.score.textContent = scoreNumber.format(score.total);
+  $("#final-score").textContent = scoreNumber.format(score.total);
+  for (const component of ["volume", "achievement", "combo", "speed"]) {
+    $(`#score-${component}`).textContent = `+${scoreNumber.format(score[component])}`;
+    $(`#score-${component}-share`).textContent = `${(score.total ? score[component] / score.total * 100 : 0).toFixed(1)}%`;
+  }
+  $("#final-average-time").textContent = score.averageSeconds === null ? "—" : `${score.averageSeconds.toFixed(1)}秒`;
+  $("#score-speed-rule").textContent = `注文から900ml提供完了までの平均時間（ゲーム内秒）。速さの基準：${TIME_SLOTS[state.timeSlot].orderStages[0]}秒。`;
+  const unlockedDeathMarch = unlockDeathMarchIfEligible(state.difficulty, state.achievement, state.timeSlot, state.playDuration);
+  updateSetupUI();
   const rank = serviceRank(state.achievement);
   $("#result-rank").textContent = rank ? `RANK ${rank}` : "未評価";
   ui.resultMode.textContent = `${DIFFICULTIES[state.difficulty].label} / ${TIME_SLOTS[state.timeSlot].label} / ${state.playDuration}秒`;
   const rankMessages = {
-    S: "完全達成。評価対象のすべての注文をON TIMEで提供しました。",
+    S: state.achievement === 100 ? "完全達成。評価対象のすべての注文をON TIMEで提供しました。" : "優れた安定感。高い達成度でシフトを完走しました。",
     A: "高い安定感。あと少しで全件ON TIMEです。",
     B: "店の流れは守れています。遅れ始めた注文を早めに拾おう。",
     C: "提供は続いていますが、待ち時間が長めです。先読みして湯を準備しよう。",
@@ -574,6 +604,8 @@ function endGame() {
     F: "供給が追いついていません。まず1台を切らさず回すことから始めよう。"
   };
   $("#result-copy").textContent = rank ? rankMessages[rank] : "評価対象の注文はまだありません。注文が届いたらお湯を提供しよう。";
+  $("#unlock-message").hidden = !unlockedDeathMarch;
+  $("#unlock-message-detail").textContent = `${TIME_SLOTS[state.timeSlot].label}のDEATH MARCHが解放されました。`;
   $("#final-achievement").textContent = achievementLabel(state.achievement); $("#final-served").textContent = state.served; $("#final-combo").textContent = state.bestCombo;
   $("#evaluation-summary").textContent = `評価対象 ${evaluation.evaluated}件：提供 ${evaluation.completed}件 / 未提供 ${evaluation.unserved}件（0%）・猶予中 ${evaluation.grace}件は評価保留`;
   $("#evaluation-breakdown").textContent = `提供時の内訳 · ON TIME ${state.serviceCounts["on-time"]} / DELAYED ${state.serviceCounts.delayed} / CRITICAL ${state.serviceCounts.critical} / OVERDUE ${state.serviceCounts.overdue}`;
@@ -610,12 +642,17 @@ function renderOrders() {
   ui.count.textContent = state.orders.length;
 }
 
+function currentScore() {
+  return calculateScore({ achievement: state.achievement, served: state.served, bestCombo: state.bestCombo, totalServeSeconds: state.totalServeSeconds, onTimeSeconds: TIME_SLOTS[state.timeSlot].orderStages[0] });
+}
+
 function updateUI() {
   const selectedOrder = syncServingTarget();
   const k = kettleData[state.selected];
   const evaluation = evaluateService(state.serviceCounts, state.orders);
   state.achievement = evaluation.percentage;
   ui.achievement.textContent = achievementLabel(state.achievement);
+  ui.score.textContent = scoreNumber.format(currentScore().total);
   ui.achievement.parentElement.classList.toggle("warning", state.achievement !== null && state.achievement < 85);
   ui.achievement.parentElement.title = `提供時の状態：ON TIME 100% / DELAYED 50% / CRITICAL 10% / OVERDUE 0%。評価対象 ${evaluation.evaluated}件（未提供 ${evaluation.unserved}件は0%）。猶予中 ${evaluation.grace}件は保留。S:90%以上 / A:80%以上 / B:70%以上 / C:60%以上 / D:50%以上 / F:50%未満。`;
   ui.combo.textContent = `${state.combo}`;
@@ -623,7 +660,7 @@ function updateUI() {
   const targetChain = state.combo < 3 ? 3 : state.combo < 5 ? 5 : (Math.floor(state.combo / 10) + 1) * 10;
   ui.flowLabel.textContent = state.flowEffect > 0 ? "FLOW STATE" : "BUILD YOUR FLOW";
   ui.flowBar.style.width = `${state.flowEffect > 0 ? state.flowEffect / 8 * 100 : state.combo / targetChain * 100}%`;
-  ui.flowHint.textContent = state.combo < 3 ? `時間超過前にあと${3 - state.combo}回連続提供で FLOW` : `${state.combo} CHAIN · 次は ${targetChain} CHAIN を目指せ`;
+  ui.flowHint.textContent = state.combo < 3 ? `時間超過前にあと${3 - state.combo}回連続提供で FLOW` : `${state.combo} COMBO · 次は ${targetChain} COMBO を目指せ`;
   ui.servedVolume.textContent = `${(state.served * .9).toFixed(1)} L SERVED`;
   const temperature = Math.min(100, Math.max(0, k.temp));
   const waterMl = Math.round(Math.min(1.2, Math.max(0, k.water)) * 1000);
@@ -640,7 +677,18 @@ function updateUI() {
   ui.waterGauge.classList.toggle("at-target", k.water >= .9);
   const labels = { empty: "空 — 給水してください", filled: "待機中 — 加熱できます", heating: "加熱中 — 温度上昇", ready: "準備完了 — 提供できます" };
   ui.state.textContent = labels[k.state];
-  [...ui.tabs.children].forEach((tab, i) => { tab.classList.toggle("active", i === state.selected); tab.classList.toggle("hot", kettleData[i].temp >= 92); });
+  [...ui.tabs.children].forEach((tab, i) => {
+    const kettle = kettleData[i];
+    updateKettleReadiness(kettle, performance.now());
+    const hot = kettle.water > 0 && kettle.temp >= 92 && kettle.state !== "heating";
+    const status = kettle.state === "heating" ? "加熱" : hot ? "湯OK" : kettle.water > 0 ? "再加熱" : "空";
+    tab.classList.toggle("active", i === state.selected);
+    tab.classList.toggle("hot", hot);
+    tab.classList.toggle("heating", kettle.state === "heating");
+    tab.querySelector("small").textContent = status;
+    tab.setAttribute("aria-label", `ケトル${i + 1}：${status}、${Math.floor(kettle.temp)}°C、${Math.round(kettle.water * 1000)}ml`);
+    tab.setAttribute("aria-pressed", String(i === state.selected));
+  });
   const servingQueueIndex = findServingQueueIndex(state.potQueue, potData, state.selectedDripper);
   const returnPlan = planWaterReturn(state.potQueue, potData, kettleData.slice(0, state.activeKettles), state.selected);
   [...ui.potQueue.children].forEach((slot, queueIndex) => {
@@ -674,6 +722,26 @@ function updateUI() {
   ui.serve.disabled = !servingPot || k.water <= 0 || k.temp < 92 || !selectedOrder;
   ui.serve.classList.toggle("ready-to-pour", !ui.serve.disabled);
   renderOrders();
+}
+
+function updateKettleReadiness(kettle, now) {
+  const heating = kettle.water > 0 && kettle.state === "heating";
+  const ready = kettle.water > 0 && kettle.temp >= 92 && !heating;
+  const animated = state.effects && !reducedMotion.matches;
+  const glow = ready ? Math.min(1, kettle.boilGlowTime / 4) : 0;
+  kettle.readyBand.visible = ready || heating;
+  kettle.readyBand.material.color.setHex(ready ? 0xc6ff72 : 0xff8745);
+  kettle.readyHalo.visible = ready;
+  kettle.readyHalo.material.opacity = .55 + glow * .4;
+  kettle.body.material.emissive.setHex(ready ? 0x86be39 : 0x000000);
+  kettle.body.material.emissiveIntensity = ready ? .12 + glow * .3 : 0;
+  kettle.led.material.emissive.setHex(heating ? 0xff541f : ready ? 0xb7ee68 : 0x000000);
+  kettle.led.material.emissiveIntensity = heating || ready ? 4 : 0;
+  kettle.steam.forEach((puff, i) => {
+    puff.material.opacity = ready ? Math.max(.12, .44 - i * .045) + glow * .12 : 0;
+    puff.scale.setScalar(ready ? 1.45 + glow * .25 : 1);
+    puff.position.y = 1.6 + i * .17 + (animated ? Math.sin(now * .0018 + i) * .06 : 0);
+  });
 }
 
 let last = performance.now();
@@ -720,7 +788,7 @@ function tick(now) {
         const oldWater = fillingKettle.water;
         const added = Math.min(FILL_RATE * rawDt, 1.2 - oldWater);
         const newWater = oldWater + added;
-        fillingKettle.temp = newWater > 0 ? ((oldWater * fillingKettle.temp) + (added * ROOM_TEMP)) / newWater : ROOM_TEMP;
+        fillingKettle.temp = newWater > 0 ? ((oldWater * fillingKettle.temp) + (added * ROOM_TEMPERATURE)) / newWater : ROOM_TEMPERATURE;
         fillingKettle.water = newWater;
         fillingKettle.state = fillingKettle.temp >= 92 ? "ready" : "filled";
         fillingKettle.boilTime = 0;
@@ -734,27 +802,22 @@ function tick(now) {
 
     kettleData.forEach(k => {
       if (k.index >= state.activeKettles) return;
+      k.boilGlowTime = Math.max(0, k.boilGlowTime - rawDt);
       if (k.state === "heating") {
         k.temp = Math.min(100, k.temp + (HEAT_POWER / Math.max(k.water, .05)) * rawDt);
-        if (k.temp >= 99.5) {
+        if (k.temp >= BOIL_TEMPERATURE) {
           k.temp = 100; k.state = "ready";
+          k.boilGlowTime = 4;
           feedback.play("ready");
           feedback.pulse(ui.tabs.children[k.index]);
-          toast(`KETTLE 0${k.index + 1} · READY 100°C`);
         }
-      } else if (k.temp > 22) k.temp = Math.max(22, k.temp - KETTLE_COOL_RATE * rawDt);
+      } else if (k.temp > ROOM_TEMPERATURE) k.temp = Math.max(ROOM_TEMPERATURE, k.temp - KETTLE_COOL_RATE * rawDt);
       if (k.state === "ready" && k.temp < 92) k.state = "filled";
-      if (k.temp >= 99.5) {
+      if (k.temp >= BOIL_TEMPERATURE) {
         k.boilTime += rawDt;
         if (k.boilTime > 9) { k.boilTime = 5; toast("沸騰放置 — 火傷に注意", true); }
       } else k.boilTime = 0;
-      k.led.material.emissive.setHex(k.state === "heating" ? 0xff541f : k.temp >= 92 ? 0xb7ee68 : 0x000000);
-      k.led.material.emissiveIntensity = k.state === "heating" || k.temp >= 92 ? 4 : 0;
-      k.steam.forEach((p, i) => {
-        const active = k.temp > 85;
-        p.material.opacity = active ? Math.max(0, .25 - i * .025) * (0.65 + Math.sin(now * .003 + i) * .35) : 0;
-        p.position.y = 1.55 + i * .14 + Math.sin(now * .0018 + i) * .05;
-      });
+      updateKettleReadiness(k, now);
       if (k.pourAnim > 0) k.pourAnim = Math.max(0, k.pourAnim - rawDt * POUR_ANIMATION_RATE);
       k.group.rotation.x = -Math.sin(k.pourAnim * Math.PI) * .32;
     });
@@ -919,6 +982,9 @@ $("#effects-toggle").onclick = e => {
 };
 
 function resize() {
-  renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight, false);
+  // Shift the framing down without moving the table or changing its scale.
+  // Keep this in the camera projection so dragging and raycasting stay aligned.
+  camera.setViewOffset(innerWidth, innerHeight, 0, -Math.round(innerHeight * WORKSPACE_VERTICAL_OFFSET), innerWidth, innerHeight);
 }
 addEventListener("resize", resize); resize(); syncSetup(); updateSetupUI(); updateUI(); requestAnimationFrame(tick);

@@ -67,17 +67,18 @@ test("blocked playback is reported, retried on interaction, and cannot restart a
   assert.equal(h.tracks[0].plays, 2);
 });
 
-test("tension stages change tracks without overlap and tempo follows the shift clock", async () => {
+test("tension stages use their rendered tempos without overlap or time stretching", async () => {
   const h = harness(); h.music.start(120, 120); await settled();
   for (const [left, stage] of [[60, "build"], [30, "rush"], [10, "final"]]) {
     h.music.update(left, 120); await settled();
     assert.equal(h.music.status().stage, stage);
     assert.match(h.tracks.at(-1).src, new RegExp(`bgm-${stage}.wav`));
     assert.equal(h.tracks.filter(audio => !audio.paused).length, 1);
+    assert.equal(h.tracks.at(-1).playbackRate, 1);
   }
   const plays = h.tracks.at(-1).plays;
   h.music.update(1, 120);
-  assert.ok(h.tracks.at(-1).playbackRate > 1);
+  assert.equal(h.tracks.at(-1).playbackRate, 1);
   assert.equal(h.tracks.at(-1).plays, plays);
 });
 

@@ -14,6 +14,7 @@ await Promise.all([
   cp("audio", "dist/audio", { recursive: true }),
   cp("audio-ui.js", "dist/audio-ui.js"),
   cp("evaluation.js", "dist/evaluation.js"),
+  cp("score.js", "dist/score.js"),
   cp("water-return.js", "dist/water-return.js"),
   cp("serving.js", "dist/serving.js"),
   cp("pot-queue.js", "dist/pot-queue.js"),
@@ -24,6 +25,7 @@ await Promise.all([
   cp("pause.js", "dist/pause.js"),
   cp("config.js", "dist/config.js"),
   cp("setup.js", "dist/setup.js"),
+  cp("progression.js", "dist/progression.js"),
   cp("boot.js", "dist/boot.js"),
   cp("vendor", "dist/vendor", { recursive: true })
 ]);

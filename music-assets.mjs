@@ -1,9 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { MUSIC_CHORDS, MUSIC_ROOTS } from "./music.js";
 
 export const MUSIC_TEMPOS = { flow: 94, build: 104, rush: 118, final: 134 };
-const CHORDS = [[52, 55, 59, 62], [48, 52, 55, 59], [45, 48, 52, 55], [47, 50, 54, 57]];
-const ROOTS = [40, 36, 33, 35];
 const frequency = note => 440 * 2 ** ((note - 69) / 12);
 
 // Deterministic, original coffee-shop groove. Render once at build time so
@@ -24,21 +23,24 @@ export function renderMusicLoop(stage) {
   }
   function note(midi, at, length, gain, bass = false) {
     const f = frequency(midi);
-    add(at, length, t => gain * (Math.sin(2 * Math.PI * f * t) + (bass ? .22 : .12) * Math.sin(4 * Math.PI * f * t)) * Math.exp(-t * (bass ? 5 : 3)));
+    add(at, length, t => gain * (Math.sin(2 * Math.PI * f * t) + (bass ? 0 : .035) * Math.sin(4 * Math.PI * f * t)) * Math.exp(-t * (bass ? 8 : 5)));
   }
   const urgent = stage === "rush" || stage === "final";
   for (let step = 0; step < 64; step++) {
     const beat = step % 16, bar = Math.floor(step / 16), at = step * stepTime;
-    const chord = CHORDS[bar];
-    if (beat === 0 || beat === 10) chord.forEach((n, i) => note(n, at + i * .009, .62, beat === 0 ? .15 : .1));
-    if (beat === 0 || beat === 8 || urgent && (beat === 6 || beat === 14)) note(ROOTS[bar], at, .3, .25, true);
+    const chord = MUSIC_CHORDS[bar];
+    if (beat === 0 || beat === 10) chord.forEach((n, i) => note(n, at + i * .012, .24, beat === 0 ? .11 : .075));
+    if (beat === 0 || beat === 8 || urgent && (beat === 6 || beat === 14)) note(MUSIC_ROOTS[bar], at, .16, .12, true);
     const melodySpacing = stage === "final" ? 1 : urgent ? 2 : stage === "build" ? 4 : 8;
-    if (beat % melodySpacing === 0) note(chord[[0, 2, 1, 3][Math.floor(step / melodySpacing) % 4]] + 12, at, .22, .13);
-    if (beat === 0 || beat === 8 || stage === "final" && (beat === 3 || beat === 11)) {
-      add(at, .2, t => .4 * Math.sin(2 * Math.PI * (45 * t + 70 * .04 * (1 - Math.exp(-t / .04)))) * Math.exp(-t * 23));
+    if (beat % melodySpacing === 0) {
+      const melodyLength = Math.min(.15, stepTime * .72);
+      note(chord[[0, 2, 1, 2][Math.floor(step / melodySpacing) % 4]], at, melodyLength, .12);
     }
-    if (beat === 4 || beat === 12) add(at, .11, t => noise() * .13 * Math.exp(-t * 30));
-    if (urgent || beat % 2 === 0) add(at, .035, t => noise() * .045 * Math.exp(-t * 80));
+    if (beat === 0 || beat === 8 || stage === "final" && (beat === 3 || beat === 11)) {
+      add(at, .1, t => .1 * Math.sin(2 * Math.PI * (48 * t + 45 * .025 * (1 - Math.exp(-t / .025)))) * Math.exp(-t * 35));
+    }
+    if (beat === 4 || beat === 12) add(at, .065, t => noise() * .04 * Math.exp(-t * 45));
+    if (urgent || beat % 2 === 0) add(at, .025, t => noise() * .018 * Math.exp(-t * 100));
   }
   let peak = 0;
   for (const sample of mix) peak = Math.max(peak, Math.abs(sample));

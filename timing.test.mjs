@@ -1,28 +1,28 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { FILL_RATE, HEAT_POWER, HEATING_TIME_SCALE, OPERATION_SPEED_SCALE, POT_BUSY_TIME, frameDeltaSeconds } from "./timing.js";
+import {
+  BOIL_TEMPERATURE, FILL_RATE, FULL_KETTLE_BOIL_TIME, HEAT_POWER,
+  KETTLE_CAPACITY, OPERATION_SPEED_SCALE, POT_BUSY_TIME, ROOM_TEMPERATURE,
+  frameDeltaSeconds
+} from "./timing.js";
 
-test("filling and pot return retain their existing 1.15x speed", () => {
+test("filling retains its existing 1.15x speed", () => {
   const fillSpeedRatio = FILL_RATE / .25;
-  const returnSpeedRatio = 7 / POT_BUSY_TIME;
 
   assert.equal(OPERATION_SPEED_SCALE, 1.15);
   assert.ok(Math.abs(fillSpeedRatio - OPERATION_SPEED_SCALE) < 1e-12);
-  assert.ok(Math.abs(returnSpeedRatio - OPERATION_SPEED_SCALE) < 1e-12);
 });
 
-test("heating takes 1.15x as long, with constant power and water-dependent warming", () => {
-  const previousPower = 13.8 * OPERATION_SPEED_SCALE;
-  assert.equal(HEATING_TIME_SCALE, 1.15);
-  for (const water of [.3, .9, 1.2]) {
-    for (const startTemperature of [22, 75, 95]) {
-      const previousTime = (99.5 - startTemperature) * water / previousPower;
-      const nextTime = (99.5 - startTemperature) * water / HEAT_POWER;
-      assert.ok(Math.abs(nextTime / previousTime - 1.15) < 1e-12);
-    }
-  }
-  assert.ok(Math.abs(HEAT_POWER - 13.8) < 1e-12);
+test("20 C and 1.2 L reaches the boil in six game seconds", () => {
+  const boilTime = (BOIL_TEMPERATURE - ROOM_TEMPERATURE) * KETTLE_CAPACITY / HEAT_POWER;
+  assert.equal(FULL_KETTLE_BOIL_TIME, 6);
+  assert.ok(Math.abs(boilTime - FULL_KETTLE_BOIL_TIME) < 1e-12);
+  assert.ok(Math.abs(HEAT_POWER - 15.9) < 1e-12);
   assert.equal(HEAT_POWER / .6, 2 * (HEAT_POWER / 1.2));
+});
+
+test("a served pot returns in six game seconds", () => {
+  assert.equal(POT_BUSY_TIME, 6);
 });
 
 test("a frame timestamp preceding start or resume never produces negative time", () => {

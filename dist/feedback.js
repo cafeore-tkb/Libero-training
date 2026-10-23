@@ -1,4 +1,4 @@
-import { createMediaMusic } from "./media-music.js?rev=media-bgm-1";
+import { createMediaMusic } from "./media-music.js?rev=clear-bgm-2";
 
 export function playShiftWhistle(context, destination) {
   // A short referee-style double whistle, with soft attacks and a capped level.
@@ -37,6 +37,7 @@ export function serviceJudgment(stage, temperature, clearsBacklog) {
 }
 
 export function createFeedback({ THREE, scene, camera, musicFactory = createMediaMusic }) {
+  const baseFov = camera.fov ?? 39;
   const layer = document.querySelector("#feedback-layer");
   const judgment = document.querySelector("#service-feedback");
   const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
@@ -156,6 +157,7 @@ export function createFeedback({ THREE, scene, camera, musicFactory = createMedi
     const animation = element.animate(keyframes, options);
     animations.add(animation);
     animation.finished.catch(() => {}).finally(() => animations.delete(animation));
+    return animation;
   }
 
   function pulse(element) {
@@ -189,15 +191,27 @@ export function createFeedback({ THREE, scene, camera, musicFactory = createMedi
     judgment.querySelector("strong").textContent = title;
     judgment.querySelector("small").textContent = detail;
     judgment.classList.toggle("milestone", big);
-    judgment.getAnimations().forEach(animation => animation.cancel());
+    const subtitle = judgment.querySelector("small");
+    [judgment, subtitle].forEach(element => element.getAnimations().forEach(animation => animation.cancel()));
     judgment.classList.add("visible");
     clearTimeout(announce.timer);
-    announce.timer = setTimeout(() => judgment.classList.remove("visible"), big ? 1900 : 1250);
-    animate(judgment, [
-      { opacity: 0, transform: "translate(-50%, -30%) scale(.7)" },
-      { opacity: 1, transform: "translate(-50%, -50%) scale(1.08)", offset: .2 },
-      { opacity: 1, transform: "translate(-50%, -50%) scale(1)" }
-    ], { duration: 380, easing: "cubic-bezier(.2,.8,.2,1)" });
+    const duration = big ? 2000 : 1450;
+    const entrance = animate(judgment, [
+      { opacity: 0, transform: "translate(-50%, calc(-50% + 18px)) scale(.55, .8) rotate(-6deg)", offset: 0, easing: "cubic-bezier(.16,1,.3,1)" },
+      { opacity: 1, transform: "translate(-50%, calc(-50% - 4px)) scale(1.12) rotate(1.5deg)", offset: .12 },
+      { opacity: 1, transform: "translate(-50%, -50%) scale(1) rotate(0deg)", offset: .23 },
+      { opacity: 1, transform: "translate(-50%, -50%) scale(1) rotate(0deg)", offset: .78, easing: "ease-in" },
+      { opacity: 0, transform: "translate(-50%, calc(-50% - 38px)) scale(.96) rotate(0deg)", offset: 1 }
+    ], { duration, fill: "both" });
+    const detailEntrance = animate(subtitle, [
+      { opacity: 0, transform: "translateY(7px)" },
+      { opacity: 1, transform: "translateY(0)" }
+    ], { duration: 220, delay: 130, fill: "backwards", easing: "ease-out" });
+    announce.timer = setTimeout(() => {
+      judgment.classList.remove("visible");
+      entrance?.cancel();
+      detailEntrance?.cancel();
+    }, duration);
     if (effectsEnabled && !motionPreference.matches) zoom = big ? 1.1 : .45;
   }
 
@@ -224,7 +238,7 @@ export function createFeedback({ THREE, scene, camera, musicFactory = createMedi
       }
     }
     zoom = Math.max(0, zoom - dt * 2.1);
-    const fov = 39 - (effectsEnabled && !motionPreference.matches ? zoom : 0);
+    const fov = baseFov - (effectsEnabled && !motionPreference.matches ? zoom : 0);
     if (Math.abs(camera.fov - fov) > .001) { camera.fov = fov; camera.updateProjectionMatrix(); }
   }
 

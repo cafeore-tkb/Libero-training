@@ -8,8 +8,8 @@
     <title>LIBERO — 湯沸かし訓練</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./style.css?rev=media-bgm-1" />
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./style.css?rev=balanced-score-1" />
   </head>
   <body>
     <main id="app">
@@ -20,7 +20,7 @@
           <span class="brand-mark">L</span>
           <span><b>LIBERO</b><small>湯沸かし訓練</small></span>
         </a>
-        <div id="shift-status" class="shift-status"><span class="live-dot"></span>NORMAL / AFTERNOON / 120秒</div>
+        <div id="shift-status" class="shift-status"><span class="live-dot"></span>EASY / MORNING / 90秒</div>
         <div class="feedback-toggles">
           <button type="button" class="icon-button" data-open-keybindings aria-label="キーバインド設定を開く" aria-haspopup="dialog" aria-controls="keybindings-dialog" title="キー設定">KEY</button>
           <button id="effects-toggle" class="icon-button" aria-label="動きのある演出を切り替え" aria-pressed="true" title="動きのある演出 ON/OFF">FX</button>
@@ -31,9 +31,10 @@
       <button type="button" id="music-retry" class="music-retry" hidden>BGMを再生 ▶</button>
 
       <section class="scoreboard" aria-label="ゲーム状況">
+        <div class="metric score" title="提供量・達成度・最高コンボ・平均提供時間を総合評価。好成績では各項目が概ね20〜30%を占める配点です。未提供の注文が猶予を過ぎて達成度が下がると、スコアも下がります。"><span>SCORE</span><strong id="score">0</strong></div>
         <div class="metric achievement" title="提供時の状態で評価。ON TIME 100% / DELAYED 50% / CRITICAL 10% / OVERDUE・猶予切れの未提供 0%。猶予中は評価保留。S:90%以上 / A:80%以上 / B:70%以上 / C:60%以上 / D:50%以上 / F:50%未満。"><span>達成度</span><strong id="achievement">未評価</strong></div>
-        <div class="metric combo"><span>CHAIN</span><strong id="combo">0</strong></div>
-        <div class="timer" id="timer"><span>SHIFT</span><strong>02:00</strong></div>
+        <div class="metric combo"><span>COMBO</span><strong id="combo">0</strong></div>
+        <div class="timer" id="timer"><span>SHIFT</span><strong>01:30</strong></div>
         <button type="button" id="pause-button" class="pause-trigger" aria-label="一時停止（Esc）" aria-keyshortcuts="Escape" aria-haspopup="dialog" aria-controls="pause-dialog" title="一時停止（Esc）" hidden><span aria-hidden="true">Ⅱ</span><small>PAUSE</small></button>
       </section>
 
@@ -44,15 +45,15 @@
       </section>
 
       <aside class="orders-panel">
-        <div class="panel-label"><span id="dripper-label">4 DRIPPERS</span><b id="order-count">0</b></div>
+        <div class="panel-label"><span id="dripper-label">3 DRIPPERS</span><b id="order-count">0</b></div>
         <div id="orders" class="orders"></div>
       </aside>
 
       <aside class="kettle-panel">
         <div class="panel-label"><span>KETTLE STATUS</span><b id="selected-number">01</b></div>
         <div class="instrument-gauges">
-          <div class="status-gauge temperature-gauge" id="temperature-gauge" role="meter" aria-labelledby="temperature-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="22" aria-valuetext="22°C">
-            <div class="gauge-heading"><span id="temperature-label">温度</span><strong id="selected-temp">22.0<small>°C</small></strong></div>
+          <div class="status-gauge temperature-gauge" id="temperature-gauge" role="meter" aria-labelledby="temperature-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20" aria-valuetext="20°C">
+            <div class="gauge-heading"><span id="temperature-label">温度</span><strong id="selected-temp">20.0<small>°C</small></strong></div>
             <div class="gauge-track" aria-hidden="true"><i id="temp-bar" class="gauge-fill"></i><b class="gauge-marker" style="left:92%"></b></div>
             <div class="gauge-scale" aria-hidden="true"><span>0</span><b>92°C 注湯ライン</b><span>100°C</span></div>
           </div>
@@ -79,7 +80,7 @@
         <button id="serve-button" class="action-button accent" data-keybinding-control="serve" aria-keyshortcuts="F"><kbd data-keybinding-label="serve">F</kbd><span><small>STEP 03</small>ある分を注ぐ</span></button>
       </section>
 
-      <div class="hint"><span>ドラッグ</span> 視点移動 <i></i> <span id="kettle-shortcuts">1—3 / ← →</span> ケトル選択</div>
+      <div class="hint"><span>ドラッグ</span> 視点移動 <i></i> <span id="kettle-shortcuts">1—2 / ← →</span> ケトル選択</div>
 
       <div id="toast" class="toast" role="status"></div>
       <div id="feedback-layer" class="feedback-layer" aria-hidden="true"></div>
@@ -98,31 +99,32 @@
             <fieldset class="setup-group" data-panel="01">
               <legend><span>01</span> DIFFICULTY</legend>
               <div class="option-grid difficulty-options" role="group" aria-label="難易度">
-                <button type="button" class="setup-option" data-difficulty="easy" aria-pressed="false"><b>EASY</b><small>2K / 3D</small></button>
-                <button type="button" class="setup-option selected" data-difficulty="normal" aria-pressed="true"><b>NORMAL</b><small>3K / 4D</small></button>
-                <button type="button" class="setup-option" data-difficulty="hard" aria-pressed="false"><b>HARD</b><small>4K / 5D</small></button>
-                <button type="button" class="setup-option danger" data-difficulty="death-march" aria-pressed="false"><b>DEATH MARCH</b><small>5K / 6D</small></button>
+                <label class="difficulty-choice"><input type="radio" name="difficulty" value="easy" data-difficulty="easy" checked /><span class="setup-option"><b>EASY</b><small>2K / 3D</small></span></label>
+                <label class="difficulty-choice"><input type="radio" name="difficulty" value="normal" data-difficulty="normal" /><span class="setup-option"><b>NORMAL</b><small>3K / 4D</small></span></label>
+                <label class="difficulty-choice"><input type="radio" name="difficulty" value="hard" data-difficulty="hard" /><span class="setup-option"><b>HARD</b><small>4K / 5D</small></span></label>
+                <label class="difficulty-choice"><input type="radio" name="difficulty" value="actual" data-difficulty="actual" /><span class="setup-option"><b>ACTUAL</b><small>5K / 6D</small></span></label>
+                <label class="difficulty-choice"><input type="radio" name="difficulty" value="death-march" data-difficulty="death-march" aria-label="未解放の隠し難易度" disabled /><span class="setup-option danger"><b><span class="locked-copy">???</span><span class="unlocked-copy">DEATH MARCH</span></b><small><span class="locked-copy">LOCKED</span><span class="unlocked-copy">4K / 6D</span></small></span></label>
               </div>
-              <small id="difficulty-summary" class="setup-summary">ケトル 3台 / ドリッパー 4人</small>
+              <small id="difficulty-summary" class="setup-summary">EASY — ケトル 2台 / ドリッパー 3人</small>
             </fieldset>
             <fieldset class="setup-group" data-panel="02">
               <legend><span>02</span> TIME SLOT</legend>
               <div class="option-grid time-options" role="group" aria-label="時間帯">
-                <button type="button" class="setup-option" data-time-slot="morning" aria-pressed="false" aria-label="MORNING 10:00から11:30 制限84秒"><b><span class="wide-label">MORNING</span><span class="compact-label">朝</span></b><small class="time-range">10:00–11:30</small><span class="time-limit">制限<strong>84</strong>秒</span></button>
+                <button type="button" class="setup-option selected" data-time-slot="morning" aria-pressed="true" aria-label="MORNING 10:00から11:30 制限84秒"><b><span class="wide-label">MORNING</span><span class="compact-label">朝</span></b><small class="time-range">10:00–11:30</small><span class="time-limit">制限<strong>84</strong>秒</span></button>
                 <button type="button" class="setup-option" data-time-slot="lunch" aria-pressed="false" aria-label="LUNCH 11:30から13:00 制限38秒"><b><span class="wide-label">LUNCH</span><span class="compact-label">昼</span></b><small class="time-range">11:30–13:00</small><span class="time-limit">制限<strong>38</strong>秒</span></button>
-                <button type="button" class="setup-option selected" data-time-slot="afternoon" aria-pressed="true" aria-label="AFTERNOON 13:00から15:00 制限66秒"><b><span class="wide-label">AFTERNOON</span><span class="compact-label">午後</span></b><small class="time-range">13:00–15:00</small><span class="time-limit">制限<strong>66</strong>秒</span></button>
+                <button type="button" class="setup-option" data-time-slot="afternoon" aria-pressed="false" aria-label="AFTERNOON 13:00から15:00 制限66秒"><b><span class="wide-label">AFTERNOON</span><span class="compact-label">午後</span></b><small class="time-range">13:00–15:00</small><span class="time-limit">制限<strong>66</strong>秒</span></button>
                 <button type="button" class="setup-option" data-time-slot="closing" aria-pressed="false" aria-label="CLOSING 15:00から16:00 制限52秒"><b><span class="wide-label">CLOSING</span><span class="compact-label">夕方</span></b><small class="time-range">15:00–16:00</small><span class="time-limit">制限<strong>52</strong>秒</span></button>
               </div>
-              <small id="time-summary" class="setup-summary">注文間隔 4.5〜6秒 / 制限 66秒</small>
+              <small id="time-summary" class="setup-summary">注文間隔 6〜8秒 / 制限 84秒</small>
             </fieldset>
             <fieldset class="setup-group" data-panel="03">
               <legend><span>03</span> PLAY TIME</legend>
               <div class="option-grid duration-options" role="group" aria-label="プレイ時間">
-                <button type="button" class="setup-option" data-play-duration="90" aria-pressed="false"><b>QUICK</b><span class="duration-value">90<span class="duration-unit">秒</span></span></button>
-                <button type="button" class="setup-option selected" data-play-duration="120" aria-pressed="true"><b>STANDARD</b><span class="duration-value">120<span class="duration-unit">秒</span></span></button>
+                <button type="button" class="setup-option selected" data-play-duration="90" aria-pressed="true"><b>QUICK</b><span class="duration-value">90<span class="duration-unit">秒</span></span></button>
+                <button type="button" class="setup-option" data-play-duration="120" aria-pressed="false"><b>STANDARD</b><span class="duration-value">120<span class="duration-unit">秒</span></span></button>
                 <button type="button" class="setup-option" data-play-duration="150" aria-pressed="false"><b>LONG</b><span class="duration-value">150<span class="duration-unit">秒</span></span></button>
               </div>
-              <small id="duration-summary" class="setup-summary">2分間のシフトに挑戦</small>
+              <small id="duration-summary" class="setup-summary">1分30秒間のシフトに挑戦</small>
             </fieldset>
             <fieldset class="setup-group description-group" data-panel="04">
               <legend><span>04</span> DESCRIPTION</legend>
@@ -145,13 +147,23 @@
         <div class="modal-card result-card">
           <p class="eyebrow">SHIFT COMPLETE</p>
           <h2 id="result-rank">RANK A</h2>
-          <p id="result-mode" class="result-mode">NORMAL / AFTERNOON</p>
+          <p id="result-mode" class="result-mode">EASY / MORNING</p>
+          <div class="result-score"><span>TOTAL SCORE</span><strong id="final-score">0</strong><small>pts</small></div>
           <p id="result-copy" class="lead"></p>
+          <p id="unlock-message" class="unlock-message" role="status" hidden><strong>SECRET UNLOCKED</strong><span id="unlock-message-detail">この時間帯のDEATH MARCHが解放されました。</span></p>
           <div class="result-grid">
             <div><span>最終達成度</span><b id="final-achievement">未評価</b></div>
             <div><span>提供数</span><b id="final-served">0</b></div>
             <div><span>最高コンボ</span><b id="final-combo">0</b></div>
           </div>
+          <div class="score-breakdown" aria-label="スコアの内訳">
+            <div><span>提供量</span><b id="score-volume">+0</b><small id="score-volume-share">0.0%</small></div>
+            <div><span>達成度</span><b id="score-achievement">+0</b><small id="score-achievement-share">0.0%</small></div>
+            <div><span>最高コンボ</span><b id="score-combo">+0</b><small id="score-combo-share">0.0%</small></div>
+            <div><span>速さ</span><b id="score-speed">+0</b><small id="score-speed-share">0.0%</small></div>
+          </div>
+          <p class="average-time">平均提供時間 <strong id="final-average-time">—</strong></p>
+          <details class="score-rules"><summary>スコアの計算方法</summary><p>提供量：1Lにつき6,000点（900mlの提供完了分）。<br />達成度：提供数 × 6,500点 ×（達成度 ÷ 100）の2乗。<br />最高コンボ：最高連続提供数 × 7,000点。<br />速さ：提供数 × 5,600点 × 速さ係数の1.5乗。速さ係数は「1 − 平均提供時間 ÷ 速さの基準」で、0〜1の範囲です。<br />好成績では各項目が概ね20〜30%になる配点です。実際の割合はプレイ内容で変わります。</p><p id="score-speed-rule"></p></details>
           <div class="service-highlights"><span>PERFECT <b id="final-perfect">0</b></span><span>RECOVERY <b id="final-recovery">0</b></span><span>給湯量 <b id="final-volume">0.0 L</b></span></div>
           <p id="evaluation-summary" class="evaluation-summary"></p>
           <p id="evaluation-breakdown" class="evaluation-summary"></p>
@@ -163,7 +175,7 @@
         <div class="pause-heading"><p class="eyebrow">SHIFT ON HOLD</p><span class="pause-symbol" aria-hidden="true">Ⅱ</span></div>
         <h2 id="pause-title">ひと息、つこう。</h2>
         <p id="pause-description">時間・加熱・注文はすべて停止中。<br />準備ができたら、続きをどうぞ。</p>
-        <div class="pause-snapshot"><div><span>残り時間</span><strong id="pause-time">02:00</strong></div><div><span>このシフト</span><b id="pause-mode">NORMAL / AFTERNOON</b></div></div>
+        <div class="pause-snapshot"><div><span>残り時間</span><strong id="pause-time">01:30</strong></div><div><span>このシフト</span><b id="pause-mode">EASY / MORNING</b></div></div>
         <button type="button" id="resume-button" class="start-button" autofocus>プレイを再開 <span aria-hidden="true">▶</span></button>
         <div class="pause-options">
           <button type="button" data-open-keybindings aria-haspopup="dialog" aria-controls="keybindings-dialog">キー設定 <span aria-hidden="true">↗</span></button>
@@ -203,6 +215,6 @@
     <script type="importmap">
       {"imports":{"three":"./vendor/three.module.js"}}
     </script>
-    <script type="module" src="./boot.js?rev=heating-pace-1"></script>
+    <script type="module" src="./boot.js?rev=balanced-score-1"></script>
   </body>
 </html>
