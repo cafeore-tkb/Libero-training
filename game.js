@@ -14,6 +14,7 @@ import { updateKeyBindingLabels } from "./keybindings-ui.js";
 import { createPauseController } from "./pause.js";
 import { emptyCoffeePotState, advancePotLifecycle } from "./pot-lifecycle.js?rev=nonnegative-clock-1";
 import { unlockDeathMarchIfEligible } from "./progression.js";
+import { cameraLayoutForViewport } from "./viewport.js?rev=mobile-fit-1";
 
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -25,12 +26,13 @@ renderer.toneMappingExposure = 1.05;
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x12221c, 0.034);
-const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.1, 100);
+const initialCameraLayout = cameraLayoutForViewport(innerWidth, innerHeight);
+const camera = new THREE.PerspectiveCamera(initialCameraLayout.fov, initialCameraLayout.aspect, 0.1, 100);
 const WORKSPACE_CENTER = 1.35;
-const CAMERA_DISTANCE = 19.5;
 const WORKSPACE_VERTICAL_OFFSET = .06;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-camera.position.set(WORKSPACE_CENTER, 8.2, CAMERA_DISTANCE);
+let cameraDistance = initialCameraLayout.distance;
+camera.position.set(WORKSPACE_CENTER, 8.2, cameraDistance);
 camera.lookAt(WORKSPACE_CENTER, 1.25, .35);
 
 const hemisphere = new THREE.HemisphereLight(0xd9f2df, 0x172019, 2.2);
@@ -879,7 +881,7 @@ addEventListener("pointerup", () => dragging = false);
 addEventListener("pointermove", e => {
   if (!dragging) return;
   cameraAngle += (e.clientX - dragX) * .003; cameraAngle = Math.max(-.28, Math.min(.28, cameraAngle)); dragX = e.clientX;
-  camera.position.x = WORKSPACE_CENTER + Math.sin(cameraAngle) * CAMERA_DISTANCE; camera.position.z = Math.cos(cameraAngle) * CAMERA_DISTANCE; camera.lookAt(WORKSPACE_CENTER, 1.25, .35);
+  camera.position.x = WORKSPACE_CENTER + Math.sin(cameraAngle) * cameraDistance; camera.position.z = Math.cos(cameraAngle) * cameraDistance; camera.lookAt(WORKSPACE_CENTER, 1.25, .35);
 });
 
 addEventListener("keydown", e => {
@@ -982,6 +984,13 @@ $("#effects-toggle").onclick = e => {
 };
 
 function resize() {
+  const layout = cameraLayoutForViewport(innerWidth, innerHeight);
+  cameraDistance = layout.distance;
+  camera.aspect = layout.aspect;
+  camera.fov = layout.fov;
+  camera.position.x = WORKSPACE_CENTER + Math.sin(cameraAngle) * cameraDistance;
+  camera.position.z = Math.cos(cameraAngle) * cameraDistance;
+  camera.lookAt(WORKSPACE_CENTER, 1.25, .35);
   renderer.setSize(innerWidth, innerHeight, false);
   // Shift the framing down without moving the table or changing its scale.
   // Keep this in the camera projection so dragging and raycasting stay aligned.

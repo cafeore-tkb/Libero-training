@@ -26,6 +26,7 @@ await Promise.all([
   cp("config.js", "dist/config.js"),
   cp("setup.js", "dist/setup.js"),
   cp("progression.js", "dist/progression.js"),
+  cp("viewport.js", "dist/viewport.js"),
   cp("boot.js", "dist/boot.js"),
   cp("vendor", "dist/vendor", { recursive: true })
 ]);
