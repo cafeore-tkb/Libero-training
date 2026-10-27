@@ -3,7 +3,7 @@ import { createFeedback, serviceJudgment } from "./feedback.js?rev=arcade-feedba
 import { bindAudioUI } from "./audio-ui.js?rev=media-bgm-1";
 import { createServiceCounts, orderStageKey, evaluateService, achievementLabel, achievementValue, serviceRank } from "./evaluation.js";
 import { calculateScore } from "./score.js?rev=balanced-score-1";
-import { DIFFICULTIES, TIME_SLOTS } from "./config.js";
+import { DIFFICULTIES, TIME_SLOTS, nextOrderDelay } from "./config.js";
 import { selection, updateSetupUI } from "./setup.js?rev=initial-easy-quick-morning-1";
 import { planWaterReturn, transferReturnedWater } from "./water-return.js";
 import { BOIL_TEMPERATURE, FILL_RATE, HEAT_POWER, POT_BUSY_TIME, POT_PRESENTATION_TIME, POUR_ANIMATION_RATE, RETURN_ANIMATION_RATE, ROOM_TEMPERATURE, frameDeltaSeconds } from "./timing.js?rev=measured-cycle-1";
@@ -764,8 +764,7 @@ function tick(now) {
     state.nextOrder -= rawDt;
     if (state.nextOrder <= 0) {
       addOrder();
-      const slot = TIME_SLOTS[state.timeSlot];
-      state.nextOrder = slot.orderMin + Math.random() * (slot.orderMax - slot.orderMin);
+      state.nextOrder = nextOrderDelay(state.difficulty, state.timeSlot);
     }
     let newlyOverdue = 0;
     state.orders.forEach(order => {
